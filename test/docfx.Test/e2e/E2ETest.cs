@@ -23,15 +23,16 @@ namespace Microsoft.Docs.Build
     {
         private static readonly string[] s_errorCodesWithoutLineInfo =
         {
-            "need-restore", "publish-url-conflict", "output-path-conflict", "download-failed", "heading-not-found", "config-not-found",
+            "need-restore", "publish-url-conflict", "output-path-conflict", "uid-conflict", "redirection-conflict",
+            "download-failed", "heading-not-found", "config-not-found", 
 
             // These error codes are the ones we could have line info but haven't implement them yet:
-            "file-not-found", "uid-not-found", "committish-not-found",
+            "committish-not-found",
             "invalid-toc-syntax", "yaml-header-not-object",
             "invalid-toc-level", "redirection-out-of-scope", "invalid-redirect-to", "moniker-config-missing",
-            "at-uid-not-found", "empty-monikers", "circular-reference", "invalid-toc-href", "invalid-uid-moniker", "moniker-overlapping",
-            "uid-conflict", "redirection-is-empty", "redirection-conflict", "invalid-locale", "unknown-field", "link-out-of-scope",
-            "github-user-not-found", "invalid-redirection", "merge-conflict", "invalid-topic-href",
+            "empty-monikers", "circular-reference", "moniker-overlapping",
+            "redirection-is-empty", "invalid-locale", "link-out-of-scope",
+            "invalid-redirection", "merge-conflict", "invalid-topic-href",
             "redirected-id-conflict", "schema-not-found"
         };
 
@@ -58,7 +59,7 @@ namespace Microsoft.Docs.Build
         [MemberData(nameof(Specs))]
         public static async Task Run(string name)
         {
-            var (docsetPath, spec, mockedRepos) = await CreateDocset(name);
+            var (docsetPath, spec, mockedRepos) = CreateDocset(name);
             if (spec is null)
             {
                 return;
@@ -187,7 +188,7 @@ namespace Microsoft.Docs.Build
 #endif
                     if (Path.GetFileNameWithoutExtension(file).Contains("localization"))
                     {
-                        var spec = YamlUtility.Deserialize<E2ESpec>(yaml, false);
+                        var spec = YamlUtility.Deserialize<E2ESpec>(yaml);
                         if (spec.Commands != null && spec.Commands.Any(c => c != null && c.Contains("--locale"))
                             && spec.Repos.Count() > 1 && !spec.Inputs.Any() && string.IsNullOrEmpty(spec.Repo))
                         {
@@ -211,8 +212,7 @@ namespace Microsoft.Docs.Build
             return result;
         }
 
-        private static async Task<(string docsetPath, E2ESpec spec, IReadOnlyDictionary<string, string> mockedRepos)>
-            CreateDocset(string specName)
+        private static (string docsetPath, E2ESpec spec, IReadOnlyDictionary<string, string> mockedRepos) CreateDocset(string specName)
         {
             var match = Regex.Match(specName, "^(.+?)/(\\d+). (\\[from loc\\] )?(.*)");
             var specPath = match.Groups[1].Value + ".yml";
@@ -225,7 +225,7 @@ namespace Microsoft.Docs.Build
             var yamlHash = HashUtility.GetMd5Hash(yaml).Substring(0, 5);
             var name = ToSafePathString(specName).Substring(0, Math.Min(30, specName.Length)) + "-" + yamlHash;
 
-            var spec = YamlUtility.Deserialize<E2ESpec>(yaml, false);
+            var spec = YamlUtility.Deserialize<E2ESpec>(yaml);
 
             var emptyEnvName = spec.Environments.FirstOrDefault(env => string.IsNullOrEmpty(Environment.GetEnvironmentVariable(env)));
             if (!string.IsNullOrEmpty(emptyEnvName))
@@ -258,7 +258,7 @@ namespace Microsoft.Docs.Build
                         t_mockedRepos.Value = mockedRepos;
 
                         var (remote, refspec, _) = HrefUtility.SplitGitHref(inputRepo);
-                        await GitUtility.CloneOrUpdate(inputFolder, remote, refspec);
+                        GitUtility.CloneOrUpdate(inputFolder, remote, refspec);
                         Process.Start(new ProcessStartInfo("git", "submodule update --init") { WorkingDirectory = inputFolder }).WaitForExit();
                     }
                     finally
@@ -383,7 +383,7 @@ namespace Microsoft.Docs.Build
                     {
                         TestUtility.VerifyJsonContainEquals(
                             // Test expectation can use YAML for readability
-                            content.StartsWith("{") ? JToken.Parse(content) : YamlUtility.Deserialize(content, nullValidation: false).Item2,
+                            content.StartsWith("{") ? JToken.Parse(content) : YamlUtility.Parse(content, null).Item2,
                             JToken.Parse(File.ReadAllText(file)));
                     }
                     break;
@@ -429,7 +429,7 @@ namespace Microsoft.Docs.Build
         {
             foreach (var log in Array.ConvertAll(logs, JArray.Parse))
             {
-                if (!s_errorCodesWithoutLineInfo.Contains(log[1].ToString()) && log.Count < 6)
+                if (!s_errorCodesWithoutLineInfo.Contains(log[1].ToString()) && log.Count < 5)
                 {
                     Assert.True(false, $"Error code {log[1].ToString()} must have line info");
                 }

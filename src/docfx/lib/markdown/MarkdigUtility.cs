@@ -7,60 +7,53 @@ using Markdig.Parsers;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Microsoft.DocAsCode.MarkdigEngine.Extensions;
 
 namespace Microsoft.Docs.Build
 {
     internal static class MarkdigUtility
     {
-        public static Range ToRange(this MarkdownObject obj, int? line = null)
+        public static SourceInfo ToSourceInfo(this MarkdownObject obj, int? line = null)
         {
             // Line info in markdown object is zero based, turn it into one based.
             if (obj != null)
-                return new Range(obj.Line + 1, obj.Column + 1);
+                return new SourceInfo(InclusionContext.File?.ToString(), obj.Line + 1, obj.Column + 1);
 
             if (line != null)
-                return new Range(line.Value + 1, 0);
+                return new SourceInfo(InclusionContext.File?.ToString(), line.Value + 1, 0);
 
             return default;
         }
 
         /// <summary>
-        /// Traverse the markdown object graph, returns true to stop the traversal.
+        /// Traverse the markdown object graph, returns true to skip the current node.
         /// </summary>
-        public static bool Visit(this MarkdownObject obj, Func<MarkdownObject, bool> action)
+        public static void Visit(this MarkdownObject obj, Func<MarkdownObject, bool> action)
         {
             if (obj is null)
-                return true;
+                return;
 
             if (action(obj))
-                return true;
+                return;
 
             if (obj is ContainerBlock block)
             {
                 foreach (var child in block)
                 {
-                    if (Visit(child, action))
-                    {
-                        return true;
-                    }
+                    Visit(child, action);
                 }
             }
             else if (obj is ContainerInline inline)
             {
                 foreach (var child in inline)
                 {
-                    if (Visit(child, action))
-                    {
-                        return true;
-                    }
+                    Visit(child, action);
                 }
             }
             else if (obj is LeafBlock leaf)
             {
                 Visit(leaf.Inline, action);
             }
-
-            return false;
         }
 
         /// <summary>

@@ -17,6 +17,10 @@ namespace Microsoft.Docs.Build
         [InlineData("a#b?c=d", "a", "", "#b?c=d")]
         [InlineData("a?b#c?d=e", "a", "?b", "#c?d=e")]
         [InlineData("a?b#c#d", "a", "?b", "#c#d")]
+        [InlineData("a####b", "a", "", "#b")]
+        [InlineData("a?b###c#d", "a", "?b", "#c#d")]
+        [InlineData("a?b##d", "a", "?b", "#d")]
+        [InlineData("a###b?c=d", "a", "", "#b?c=d")]
         public static void SplitHref(string href, string path, string query, string fragment)
         {
             var (apath, aquery, afragment) = HrefUtility.SplitHref(href);
@@ -41,20 +45,22 @@ namespace Microsoft.Docs.Build
         }
 
         [Theory]
-        [InlineData("", HrefType.RelativePath)]
-        [InlineData("a", HrefType.RelativePath)]
-        [InlineData("a/b", HrefType.RelativePath)]
-        [InlineData("a\\b", HrefType.RelativePath)]
-        [InlineData("/a", HrefType.AbsolutePath)]
-        [InlineData("\\a", HrefType.AbsolutePath)]
-        [InlineData("#", HrefType.SelfBookmark)]
-        [InlineData("#a", HrefType.SelfBookmark)]
-        [InlineData("http://a", HrefType.External)]
-        [InlineData("https://a.com", HrefType.External)]
-        [InlineData("http:a", HrefType.External)]
-        [InlineData("feedback-url:?query=a", HrefType.External)]
-        [InlineData("c:/a", HrefType.WindowsAbsolutePath)]
-        [InlineData("c:\\a", HrefType.WindowsAbsolutePath)]
+        [InlineData(@"", HrefType.RelativePath)]
+        [InlineData(@"a", HrefType.RelativePath)]
+        [InlineData(@"a/b", HrefType.RelativePath)]
+        [InlineData(@"a\b", HrefType.RelativePath)]
+        [InlineData(@"/", HrefType.AbsolutePath)]
+        [InlineData(@"/a", HrefType.AbsolutePath)]
+        [InlineData(@"\\a", HrefType.External)]
+        [InlineData(@"//a", HrefType.External)]
+        [InlineData(@"#", HrefType.SelfBookmark)]
+        [InlineData(@"#a", HrefType.SelfBookmark)]
+        [InlineData(@"http://a", HrefType.External)]
+        [InlineData(@"https://a.com", HrefType.External)]
+        [InlineData(@"http:a", HrefType.External)]
+        [InlineData(@"feedback-url:?query=a", HrefType.External)]
+        [InlineData(@"c:/a", HrefType.WindowsAbsolutePath)]
+        [InlineData(@"c:\a", HrefType.WindowsAbsolutePath)]
         public static void GetHrefType(string href, HrefType expected)
         {
             Assert.Equal(expected, HrefUtility.GetHrefType(href));

@@ -31,7 +31,7 @@ namespace Microsoft.Docs.Build
                 errors.AddIfNotNull(breadcrumbError);
                 metadata.BreadcrumbPath = breadcrumbPath;
             }
-
+ 
             model.SchemaType = schema.Name;
             model.Locale = file.Docset.Locale;
             model.Metadata = metadata;

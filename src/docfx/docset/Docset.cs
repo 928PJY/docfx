@@ -168,7 +168,12 @@ namespace Microsoft.Docs.Build
             Repository = repository ?? Repository.Create(DocsetPath, branch: null);
 
             // pass on the command line options to its children
-            _buildScope = new Lazy<HashSet<Document>>(() => CreateBuildScope(Redirections.Files));
+            _buildScope = new Lazy<HashSet<Document>>(() =>
+            {
+                var (errors, scope) = CreateBuildScope(Redirections.Files);
+                report.Write(Config.ConfigFileName, errors);
+                return scope;
+            });
             _redirections = new Lazy<RedirectionMap>(() =>
             {
                 var (errors, map) = RedirectionMap.Create(this);
@@ -246,10 +251,11 @@ namespace Microsoft.Docs.Build
             return result.Reverse().ToDictionary(item => item.Key, item => item.Value);
         }
 
-        private HashSet<Document> CreateBuildScope(IEnumerable<Document> redirections)
+        private (List<Error> error, HashSet<Document> scope) CreateBuildScope(IEnumerable<(Document doc, bool withId)> redirections)
         {
             using (Progress.Start("Globbing files"))
             {
+                var errors = new List<Error>();
                 var glob = GlobUtility.CreateGlobMatcher(Config.Files, Config.Exclude.Concat(Config.DefaultExclude).ToArray());
                 var files = new ConcurrentBag<Document>();
 
@@ -265,20 +271,29 @@ namespace Microsoft.Docs.Build
                     });
 
                 var result = new HashSet<Document>(files);
+                var redirectionInScope = new HashSet<(Document doc, bool withId)>();
 
                 foreach (var redirection in redirections)
                 {
-                    if (glob(redirection.FilePath))
+                    if (glob(redirection.doc.FilePath))
                     {
-                        result.Add(redirection);
+                        redirectionInScope.Add(redirection);
+                        result.Add(redirection.doc);
                     }
                     else
                     {
-                        _report.Write(Errors.RedirectionOutOfScope(redirection, Config.ConfigFileName));
+                        errors.Add(Errors.RedirectionOutOfScope(redirection.doc, Config.ConfigFileName));
                     }
                 }
 
-                return result;
+                errors.AddRange(redirectionInScope
+                    .Where(redirection => redirection.withId)
+                    .Select(redirection => redirection.doc)
+                    .GroupBy(file => file.RedirectionUrl)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => Errors.RedirectionDocumentIdConflict(group, group.Key)));
+
+                return (errors, result);
             }
         }
 

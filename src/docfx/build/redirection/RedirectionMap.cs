@@ -8,13 +8,13 @@ namespace Microsoft.Docs.Build
 {
     internal class RedirectionMap
     {
-        private readonly IReadOnlyDictionary<string, Document> _redirectionsBySourcePath;
+        private readonly IReadOnlyDictionary<string, (Document doc, bool withId)> _redirectionsBySourcePath;
         private readonly IReadOnlyDictionary<string, Document> _redirectionsByRedirectionUrl;
 
-        public IEnumerable<Document> Files => _redirectionsBySourcePath.Values;
+        public IEnumerable<(Document, bool)> Files => _redirectionsBySourcePath.Values;
 
         private RedirectionMap(
-            IReadOnlyDictionary<string, Document> redirectionsBySourcePath,
+            IReadOnlyDictionary<string, (Document doc, bool withId)> redirectionsBySourcePath,
             IReadOnlyDictionary<string, Document> redirectionsByRedirectionUrl)
         {
             _redirectionsBySourcePath = redirectionsBySourcePath;
@@ -25,7 +25,7 @@ namespace Microsoft.Docs.Build
         {
             if (_redirectionsBySourcePath.TryGetValue(sourcePath, out var file))
             {
-                redirectionUrl = file.RedirectionUrl;
+                redirectionUrl = file.doc.RedirectionUrl;
                 return true;
             }
             redirectionUrl = null;
@@ -47,28 +47,24 @@ namespace Microsoft.Docs.Build
         public static (List<Error> errors, RedirectionMap map) Create(Docset docset)
         {
             var errors = new List<Error>();
-            var redirections = new HashSet<Document>();
+            var redirectionDocs = new HashSet<Document>();
+            var redirections = new List<(Document doc, bool withId)>();
 
             // load redirections with document id
-            AddRedirections(docset.Config.Redirections, checkRedirectTo: true);
+            AddRedirections(docset.Config.Redirections, checkRedirectTo: true, withId: true);
 
             var redirectionsByRedirectionUrl = redirections
-                .GroupBy(file => file.RedirectionUrl, PathUtility.PathComparer)
-                .ToDictionary(group => group.Key, group => group.First(), PathUtility.PathComparer);
-
-            errors.AddRange(redirections
-                .GroupBy(file => file.RedirectionUrl)
-                .Where(group => group.Count() > 1)
-                .Select(group => Errors.RedirectionDocumentIdConflict(group, group.Key)));
+                .GroupBy(file => file.doc.RedirectionUrl, PathUtility.PathComparer)
+                .ToDictionary(group => group.Key, group => group.First().doc, PathUtility.PathComparer);
 
             // load redirections without document id
             AddRedirections(docset.Config.RedirectionsWithoutId);
 
-            var redirectionsBySourcePath = redirections.ToDictionary(file => file.FilePath, PathUtility.PathComparer);
+            var redirectionsBySourcePath = redirections.ToDictionary(file => file.doc.FilePath, PathUtility.PathComparer);
 
             return (errors, new RedirectionMap(redirectionsBySourcePath, redirectionsByRedirectionUrl));
 
-            void AddRedirections(Dictionary<string, string> items, bool checkRedirectTo = false)
+            void AddRedirections(Dictionary<string, string> items, bool checkRedirectTo = false, bool withId = false)
             {
                 foreach (var (path, redirectTo) in items)
                 {
@@ -92,9 +88,13 @@ namespace Microsoft.Docs.Build
                     }
                     else
                     {
-                        if (!redirections.Add(document))
+                        if (!redirectionDocs.Add(document))
                         {
                             errors.Add(Errors.RedirectionConflict(pathToDocset));
+                        }
+                        else
+                        {
+                            redirections.Add((document, withId));
                         }
                     }
                 }

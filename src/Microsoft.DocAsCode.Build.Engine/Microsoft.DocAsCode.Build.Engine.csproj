@@ -7,14 +7,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="DocumentBuilder.cs" />
     <Compile Include="HashStreamHelper.cs" />
+    <Compile Include="Incrementals\ProcessorStepInfo.cs" />
+    <Compile Include="Incrementals\ProcessorInfo.cs" />
     <Compile Include="Incrementals\BuildVersionInfo.cs" />
     <Compile Include="Incrementals\BuildInfo.cs" />
+    <Compile Include="Incrementals\ChangeItem.cs" />
+    <Compile Include="Incrementals\ChangeKindWithDependency.cs" />
+    <Compile Include="Incrementals\ChangeKind.cs" />
+    <Compile Include="Incrementals\ChangeList.cs" />
     <Compile Include="Incrementals\DependencyGraph.cs" />
     <Compile Include="InvalidPreprocessorException.cs" />
     <Compile Include="CrossReferenceNotResolvedException.cs" />
     <Compile Include="DocumentBuildContext.cs" />
-    <Compile Include="DocumentBuilder.cs" />
+    <Compile Include="SingleDocumentBuilder.cs" />
     <Compile Include="DocumentBuildParameters.cs" />
     <Compile Include="FileCollection.cs" />
     <Compile Include="FileMetadata.cs" />
@@ -22,6 +29,7 @@
     <Compile Include="HostService.cs" />
     <Compile Include="MarkdownProviders\GfmServiceProvider.cs" />
     <Compile Include="MarkdownProviders\DfmServiceProvider.cs" />
+    <Compile Include="TemplatePreprocessors\TemplateUtility.cs" />
     <Compile Include="TransformModelOptions.cs" />
     <Compile Include="TemplateRenderers\TemplateRendererResource.cs" />
     <Compile Include="TemplateRenderers\TemplateRendererType.cs" />
@@ -152,7 +160,7 @@
     <Reference Include="System.Web" />
     <Reference Include="System.XML" />
     <Reference Include="YamlDotNet">
-      <HintPath>..\..\packages\YamlDotNet.Signed.3.7.0\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\YamlDotNet.dll</HintPath>
+      <HintPath>..\..\packages\YamlDotNet.Signed.3.9.0\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\YamlDotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

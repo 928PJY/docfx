@@ -36,7 +36,7 @@ b:
 ---", "<yamlheader start=\"1\" end=\"5\">a: b\nb:\n  c: e</yamlheader>")]
         [InlineData(@"# Hello @CrossLink1 @'CrossLink2'dummy 
 @World",
-            "<h1 id=\"hello-crosslink1-crosslink2-dummy\">Hello <xref href=\"CrossLink1\" data-throw-if-not-resolved=\"False\" data-raw=\"@CrossLink1\"></xref> <xref href=\"CrossLink2\" data-throw-if-not-resolved=\"False\" data-raw=\"@&#39;CrossLink2&#39;\"></xref>dummy</h1>\n<p><xref href=\"World\" data-throw-if-not-resolved=\"False\" data-raw=\"@World\"></xref></p>\n")]
+            "<h1 id=\"hello-crosslink1-crosslink2dummy\">Hello <xref href=\"CrossLink1\" data-throw-if-not-resolved=\"False\" data-raw=\"@CrossLink1\"></xref> <xref href=\"CrossLink2\" data-throw-if-not-resolved=\"False\" data-raw=\"@&#39;CrossLink2&#39;\"></xref>dummy</h1>\n<p><xref href=\"World\" data-throw-if-not-resolved=\"False\" data-raw=\"@World\"></xref></p>\n")]
         [InlineData("a\n```\nc\n```",
             "<p>a</p>\n<pre><code>c\n</code></pre>")]
         [InlineData(@"* Unordered list item 1
@@ -55,10 +55,6 @@ b:
         [InlineData(
             @"[*a*](xref:uid)",
             "<p><a href=\"xref:uid\"><em>a</em></a></p>\n")]
-        [InlineData("# sān　空格　 sān\n", "<h1 id=\"sān-空格-sān\">sān　空格　 sān</h1>\n")]
-        [InlineData("# Hello World\n# Hello World", "<h1 id=\"hello-world\">Hello World</h1>\n<h1 id=\"hello-world-0\">Hello World</h1>\n")]
-        [InlineData("# a-0\n# a\n# a", "<h1 id=\"a-0\">a-0</h1>\n<h1 id=\"a\">a</h1>\n<h1 id=\"a-0-0\">a</h1>\n")]
-        [InlineData("# 测试。用例\n# 测试。用例", "<h1 id=\"测试-用例\">测试。用例</h1>\n<h1 id=\"测试-用例-0\">测试。用例</h1>\n")]
         public void TestDfmInGeneral(string source, string expected)
         {
             Assert.Equal(expected.Replace("\r\n", "\n"), DocfxFlavoredMarked.Markup(source));
@@ -249,6 +245,63 @@ Inline [!include[ref3](ref3.md ""This is root"")]
             Assert.Equal(
               new[] { "inc1.md", "inc2.md", "inc3.md" },
               dependency.OrderBy(x => x));
+        }
+
+        [Fact]
+        [Trait("Related", "DfmMarkdown")]
+        public void TestDfmVideo_Video()
+        {
+            // 1. Prepare data
+            var root = @"The following is video.
+> [!Video https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4]
+";
+
+            var expected = @"<p>The following is video.</p>
+<iframe width=""640"" height=""320"" src=""https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4"" frameborder=""0"" allowfullscreen=""true""></iframe>
+";
+
+            var marked = DocfxFlavoredMarked.Markup(root);
+            Assert.Equal(expected.Replace("\r\n", "\n"), marked);
+        }
+
+        [Fact]
+        [Trait("Related", "DfmMarkdown")]
+        public void TestDfmVideo_ConsecutiveVideos()
+        {
+            // 1. Prepare data
+            var root = @"The following is two videos.
+> [!Video https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4]
+> [!Video https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4]";
+
+            var expected = @"<p>The following is two videos.</p>
+<iframe width=""640"" height=""320"" src=""https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4"" frameborder=""0"" allowfullscreen=""true""></iframe>
+<iframe width=""640"" height=""320"" src=""https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4"" frameborder=""0"" allowfullscreen=""true""></iframe>
+";
+
+            var marked = DocfxFlavoredMarked.Markup(root);
+            Assert.Equal(expected.Replace("\r\n", "\n"), marked);
+        }
+
+        [Fact]
+        [Trait("Related", "DfmMarkdown")]
+        public void TestDfmVideo_MixWithNote()
+        {
+            // 1. Prepare data
+            var root = @"The following is video mixed with note.
+> [!Video https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4]
+> [!NOTE]
+> this is note text
+> [!Video https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4]";
+
+            var expected = @"<p>The following is video mixed with note.</p>
+<iframe width=""640"" height=""320"" src=""https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4"" frameborder=""0"" allowfullscreen=""true""></iframe>
+<div class=""NOTE""><h5>NOTE</h5><p>this is note text</p>
+</div>
+<iframe width=""640"" height=""320"" src=""https://sec.ch9.ms/ch9/4393/7d7c7df7-3f15-4a65-a2f7-3e4d0bea4393/Episode208_mid.mp4"" frameborder=""0"" allowfullscreen=""true""></iframe>
+";
+
+            var marked = DocfxFlavoredMarked.Markup(root);
+            Assert.Equal(expected.Replace("\r\n", "\n"), marked);
         }
 
         [Fact]
@@ -644,11 +697,23 @@ tag started with alphabet should not be encode: <abc> <a-hello> <a?world> <a_b h
 
         [Fact]
         [Trait("Related", "DfmMarkdown")]
+        [Trait("A wrong case need to be fixed in dfm", "' in title should be traslated to &#39; instead of &amp;#39;")]
+        public void TestDfmLink_LinkWithSpecialCharactorsInTitle()
+        {
+            var source = @"[text's string](https://www.google.com.sg/?gfe_rd=cr&ei=Xk ""Google's homepage"")";
+            var expected = @"<p><a href=""https://www.google.com.sg/?gfe_rd=cr&amp;ei=Xk"" title=""Google&#39;s homepage"">text&#39;s string</a></p>
+";
+            var marked = DocfxFlavoredMarked.Markup(source);
+            Assert.Equal(expected.Replace("\r\n", "\n"), marked);
+        }
+
+        [Fact]
+        [Trait("Related", "DfmMarkdown")]
         public void TestDfmLink_WithSpecialCharactorsInTitle()
         {
             var source = @"[This is link text with quotation ' and double quotation ""hello"" world](girl.png ""title is ""hello"" world."")";
 
-            var expected = @"<p><a href=""girl.png"" title=""title is &amp;quot;hello&amp;quot; world."">This is link text with quotation &#39; and double quotation &quot;hello&quot; world</a></p>
+            var expected = @"<p><a href=""girl.png"" title=""title is &quot;hello&quot; world."">This is link text with quotation &#39; and double quotation &quot;hello&quot; world</a></p>
 ";
             var marked = DocfxFlavoredMarked.Markup(source);
             Assert.Equal(expected.Replace("\r\n", "\n"), marked);
@@ -674,7 +739,8 @@ tag started with alphabet should not be encode: <abc> <a-hello> <a?world> <a_b h
                 new ContainerConfiguration()
                     .WithAssembly(typeof(DocfxFlavoredMarkdownTest).Assembly)
                     .CreateContainer());
-            mrb.AddTagValidators(
+            mrb.AddTagValidators(new[]
+            {
                 new MarkdownTagValidationRule
                 {
                     TagNames = new List<string> { "em", "div" },
@@ -687,9 +753,16 @@ tag started with alphabet should not be encode: <abc> <a-hello> <a?world> <a_b h
                     TagNames = new List<string> { "h1" },
                     MessageFormatter = "Warning tag({0})!",
                     Behavior = TagValidationBehavior.Warning,
-                });
-            mrb.AddValidators(HtmlMarkdownTokenValidatorProvider.ContractName);
-            builder.Rewriter = mrb.Create();
+                },
+            });
+            mrb.AddValidators(new[]
+            {
+                new MarkdownValidationRule
+                {
+                    ContractName =  HtmlMarkdownTokenValidatorProvider.ContractName,
+                }
+            });
+            builder.Rewriter = mrb.CreateRewriter();
 
             var engine = builder.CreateDfmEngine(new DfmRenderer());
             var listener = new TestLoggerListener("test!!!!" + "." + MarkdownValidatorBuilder.MarkdownValidatePhaseName);

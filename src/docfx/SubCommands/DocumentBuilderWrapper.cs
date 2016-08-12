@@ -7,18 +7,17 @@ namespace Microsoft.DocAsCode.SubCommands
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.IO;
-    using System.Linq;
-    using System.Reflection;
     using System.Runtime.Remoting.Lifetime;
+    using System.Reflection;
 
     using Microsoft.DocAsCode;
+    using Microsoft.DocAsCode.Build.Common;
     using Microsoft.DocAsCode.Build.ConceptualDocuments;
-    using Microsoft.DocAsCode.Build.Engine;
     using Microsoft.DocAsCode.Build.ManagedReference;
     using Microsoft.DocAsCode.Build.ResourceFiles;
     using Microsoft.DocAsCode.Build.RestApi;
-    using Microsoft.DocAsCode.Build.Common;
     using Microsoft.DocAsCode.Build.TableOfContents;
+    using Microsoft.DocAsCode.Build.Engine;
     using Microsoft.DocAsCode.Common;
     using Microsoft.DocAsCode.Exceptions;
     using Microsoft.DocAsCode.Plugins;
@@ -30,12 +29,20 @@ namespace Microsoft.DocAsCode.SubCommands
         private readonly string _pluginDirectory;
         private readonly string _baseDirectory;
         private readonly string _outputDirectory;
+        private readonly string _templateDirectory;
         private readonly BuildJsonConfig _config;
         private readonly CrossAppDomainListener _listener;
         private readonly TemplateManager _manager;
         private readonly LogLevel _logLevel;
 
-        public DocumentBuilderWrapper(BuildJsonConfig config, TemplateManager manager, string baseDirectory, string outputDirectory, string pluginDirectory, CrossAppDomainListener listener)
+        public DocumentBuilderWrapper(
+            BuildJsonConfig config,
+            TemplateManager manager,
+            string baseDirectory,
+            string outputDirectory,
+            string pluginDirectory,
+            CrossAppDomainListener listener,
+            string templateDirectory)
         {
             if (config == null)
             {
@@ -49,11 +56,13 @@ namespace Microsoft.DocAsCode.SubCommands
             _listener = listener;
             _manager = manager;
             _logLevel = Logger.LogLevelThreshold;
+            _templateDirectory = templateDirectory;
         }
 
         public void BuildDocument()
         {
             var sponsor = new ClientSponsor();
+            EnvironmentContext.BaseDirectory = _baseDirectory;
             if (_listener != null)
             {
                 Logger.LogLevelThreshold = _logLevel;
@@ -64,7 +73,7 @@ namespace Microsoft.DocAsCode.SubCommands
             {
                 try
                 {
-                    BuildDocument(_config, _manager, _baseDirectory, _outputDirectory, _pluginDirectory);
+                    BuildDocument(_config, _manager, _baseDirectory, _outputDirectory, _pluginDirectory, _templateDirectory);
                 }
                 catch (AggregateException agg) when (agg.InnerException is DocfxException || agg.InnerException is DocumentException)
                 {
@@ -89,30 +98,31 @@ namespace Microsoft.DocAsCode.SubCommands
             }
         }
 
-        public static void BuildDocument(BuildJsonConfig config, TemplateManager templateManager, string baseDirectory, string outputDirectory, string pluginDirectory)
+        public static void BuildDocument(BuildJsonConfig config, TemplateManager templateManager, string baseDirectory, string outputDirectory, string pluginDirectory, string templateDirectory)
         {
-            using (var builder = new DocumentBuilder(LoadPluginAssemblies(pluginDirectory)))
+            IEnumerable<Assembly> assemblies;
+            using (new LoggerPhaseScope("LoadPluginAssemblies", true))
             {
-                builder.IntermediateFolder = config.IntermediateFolder;
-                using (new PerformanceScope("building documents", LogLevel.Info))
+                assemblies = LoadPluginAssemblies(pluginDirectory);
+            }
+            var postProcessorNames = config.PostProcessors.ToImmutableArray();
+            var metadata = config.GlobalMetadata?.ToImmutableDictionary();
+
+            // For backward compatible, retain "_enableSearch" to globalMetadata though it's deprecated
+            object value;
+            if (metadata != null && metadata.TryGetValue("_enableSearch", out value))
+            {
+                var isSearchable = value as bool?;
+                if (isSearchable.HasValue && isSearchable.Value && !postProcessorNames.Contains("ExtractSearchIndex"))
                 {
-                    foreach (var parameters in ConfigToParameter(config, templateManager, baseDirectory, outputDirectory))
-                    {
-                        if (parameters.Files.Count == 0)
-                        {
-                            Logger.LogWarning(string.IsNullOrEmpty(parameters.VersionName)
-                                ? "No files found, nothing is generated in default version."
-                                : $"No files found, nothing is generated in version \"{parameters.VersionName}\".");
-                            return;
-                        }
-                        if (!string.IsNullOrEmpty(parameters.VersionName))
-                        {
-                            Logger.LogInfo($"Start building for version: {parameters.VersionName}");
-                        }
-                        builder.Build(parameters);
-                    }
-                    builder.SaveManifest(outputDirectory);
+                    postProcessorNames = postProcessorNames.Add("ExtractSearchIndex");
                 }
+            }
+
+            using (var builder = new DocumentBuilder(assemblies, postProcessorNames, config.IntermediateFolder))
+            using (new PerformanceScope("building documents", LogLevel.Info))
+            {
+                builder.Build(ConfigToParameter(config, templateManager, baseDirectory, outputDirectory, templateDirectory), outputDirectory);
             }
         }
 
@@ -164,7 +174,7 @@ namespace Microsoft.DocAsCode.SubCommands
             }
         }
 
-        private static IEnumerable<DocumentBuildParameters> ConfigToParameter(BuildJsonConfig config, TemplateManager templateManager, string baseDirectory, string outputDirectory)
+        private static IEnumerable<DocumentBuildParameters> ConfigToParameter(BuildJsonConfig config, TemplateManager templateManager, string baseDirectory, string outputDirectory, string templateDir)
         {
             var parameters = new DocumentBuildParameters();
             parameters.OutputBaseDir = outputDirectory;
@@ -229,6 +239,8 @@ namespace Microsoft.DocAsCode.SubCommands
             {
                 parameters.MarkdownEngineParameters = config.MarkdownEngineProperties.ToImmutableDictionary();
             }
+
+            parameters.TemplateDir = templateDir;
 
             var fileMappingParametersDictionary = GroupFileMappings(config.Content, config.Overwrite, config.Resource);
 

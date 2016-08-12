@@ -17,22 +17,56 @@ namespace Microsoft.DocAsCode.MarkdownLite
 
         public virtual StringBuffer Render(IMarkdownRenderer render, MarkdownImageInlineToken token, MarkdownInlineContext context)
         {
+            switch(token.LinkType)
+            {
+                case MarkdownLinkType.NormalLink:
+                    return RenderImageNormalLink(render, token, context);
+                case MarkdownLinkType.NumberLink:
+                    return RenderNumberLink(render, token, context);
+                case MarkdownLinkType.RefLink:
+                    return RenderRefLink(render, token, context);
+                default:
+                    throw new NotSupportedException($"Link type: {token.LinkType} doesn't support in Image Link Render");
+            }
+        }
+
+        public virtual StringBuffer Render(IMarkdownRenderer render, MarkdownLinkInlineToken token, MarkdownInlineContext context)
+        {
+            switch (token.LinkType)
+            {
+                case MarkdownLinkType.AutoLink:
+                    return RenderAutoLink(render, token, context);
+                case MarkdownLinkType.NormalLink:
+                    return RenderLinkNormalLink(render, token, context);
+                case MarkdownLinkType.NumberLink:
+                    return RenderNumberLink(render, token, context);
+                case MarkdownLinkType.RefLink:
+                    return RenderRefLink(render, token, context);
+                case MarkdownLinkType.UrlLink:
+                    return RenderUrlLink(render, token, context);
+                default:
+                    throw new NotSupportedException($"Link type: {token.LinkType} doesn't support in Link Render");
+            }
+        }
+
+        private StringBuffer RenderImageNormalLink(IMarkdownRenderer render, MarkdownImageInlineToken token, MarkdownInlineContext context)
+        {
             StringBuffer content = StringBuffer.Empty;
             content += "![";
             content += token.Text;
             content += "](";
-            content += Regexes.Helper.MarkdownUnescape.Replace(StringHelper.Unescape(token.Href), m => "\\" + m.Value);
+            content += Regexes.Helper.MarkdownUnescape.Replace(token.Href, m => "\\" + m.Value);
             if (!string.IsNullOrEmpty(token.Title))
             {
                 content += " \"";
-                content += Regexes.Helper.MarkdownUnescape.Replace(StringHelper.Unescape(token.Title), m => "\\" + m.Value);
+                content += Regexes.Helper.MarkdownUnescape.Replace(token.Title, m => "\\" + m.Value);
                 content += "\"";
             }
             content += ")";
             return content;
         }
 
-        public virtual StringBuffer Render(IMarkdownRenderer render, MarkdownLinkInlineToken token, MarkdownInlineContext context)
+        private StringBuffer RenderLinkNormalLink(IMarkdownRenderer render, MarkdownLinkInlineToken token, MarkdownInlineContext context)
         {
             StringBuffer content = StringBuffer.Empty;
             content += "[";
@@ -41,15 +75,89 @@ namespace Microsoft.DocAsCode.MarkdownLite
                 content += render.Render(t);
             }
             content += "](";
-            content += Regexes.Helper.MarkdownUnescape.Replace(StringHelper.Unescape(token.Href), m => "\\" + m.Value);
+            content += Regexes.Helper.MarkdownUnescape.Replace(token.Href, m => "\\" + m.Value);
             if (!string.IsNullOrEmpty(token.Title))
             {
                 content += " \"";
-                content += Regexes.Helper.MarkdownUnescape.Replace(StringHelper.Unescape(token.Title), m => "\\" + m.Value);
+                content += Regexes.Helper.MarkdownUnescape.Replace(token.Title, m => "\\" + m.Value);
                 content += "\"";
             }
             content += ")";
             return content;
+        }
+
+        private StringBuffer RenderNumberLink(IMarkdownRenderer render, IMarkdownToken token, MarkdownInlineContext context)
+        {
+            StringBuffer content = StringBuffer.Empty;
+            if(token is MarkdownImageInlineToken)
+            {
+                var realToken = token as MarkdownImageInlineToken;
+                content += "![";
+                content += realToken.Text;
+                content += "]";
+            }
+            else if(token is MarkdownLinkInlineToken)
+            {
+                var realToken = token as MarkdownLinkInlineToken;
+                content += "[";
+                foreach (var t in realToken.Content)
+                {
+                    content += render.Render(t);
+                }
+                content += "]";
+            }
+            else
+            {
+                throw new NotSupportedException("Number link token should be either link token or image token");
+            }
+
+            return content;
+        }
+
+        private StringBuffer RenderRefLink(IMarkdownRenderer render, IMarkdownToken token, MarkdownInlineContext context)
+        {
+            StringBuffer content = StringBuffer.Empty;
+            if (token is MarkdownImageInlineToken)
+            {
+                var realToken = token as MarkdownImageInlineToken;
+                content += "![";
+                content += realToken.Text;
+                content += "][";
+                content += realToken.RefId;
+                content += "]";
+            }
+            else if (token is MarkdownLinkInlineToken)
+            {
+                var realToken = token as MarkdownLinkInlineToken;
+                content += "[";
+                foreach (var t in realToken.Content)
+                {
+                    content += render.Render(t);
+                }
+                content += "][";
+                content += realToken.RefId;
+                content += "]";
+            }
+            else
+            {
+                throw new NotSupportedException("Reference link token should be either link token or image token");
+            }
+
+            return content;
+        }
+
+        private StringBuffer RenderAutoLink(IMarkdownRenderer render, MarkdownLinkInlineToken token, MarkdownInlineContext context)
+        {
+            StringBuffer content = StringBuffer.Empty;
+            content += "<";
+            content += token.Href;
+            content += ">";
+            return content;
+        }
+
+        private StringBuffer RenderUrlLink(IMarkdownRenderer render, MarkdownLinkInlineToken token, MarkdownInlineContext context)
+        {
+            return token.Href;
         }
 
         public virtual StringBuffer Render(IMarkdownRenderer render, GfmDelInlineToken token, MarkdownInlineContext context)
@@ -153,7 +261,7 @@ namespace Microsoft.DocAsCode.MarkdownLite
             foreach (var header in token.Header)
             {
                 content += " ";
-                foreach (var t in header.Tokens)
+                foreach (var t in header.Content.Tokens)
                 {
                     content += render.Render(t);
                 }
@@ -192,7 +300,7 @@ namespace Microsoft.DocAsCode.MarkdownLite
                 content += "| ";
                 foreach (var column in row)
                 {
-                    foreach (var t in column.Tokens)
+                    foreach (var t in column.Content.Tokens)
                     {
                         content += render.Render(t);
                     }

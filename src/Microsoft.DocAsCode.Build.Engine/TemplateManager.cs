@@ -18,6 +18,7 @@ namespace Microsoft.DocAsCode.Build.Engine
         private readonly List<string> _templates = new List<string>();
         private readonly List<string> _themes = new List<string>();
         private readonly ResourceFinder _finder;
+
         public TemplateManager(Assembly assembly, string rootNamespace, List<string> templates, List<string> themes, string baseDirectory)
         {
             _finder = new ResourceFinder(assembly, rootNamespace, baseDirectory);
@@ -30,14 +31,14 @@ namespace Microsoft.DocAsCode.Build.Engine
             return TryExportResourceFiles(_templates, outputDirectory, true, regexFilter);
         }
 
-        public TemplateProcessor GetTemplateProcessor(int maxParallelism)
+        public TemplateProcessor GetTemplateProcessor(DocumentBuildContext context, int maxParallelism)
         {
-            return new TemplateProcessor(new CompositeResourceCollectionWithOverridden(_templates.Select(s => _finder.Find(s)).Where(s => s != null)), maxParallelism);
+            return new TemplateProcessor(new CompositeResourceCollectionWithOverridden(_templates.Select(s => _finder.Find(s)).Where(s => s != null)), context, maxParallelism);
         }
 
         public void ProcessTheme(string outputDirectory, bool overwrite)
         {
-            using (new LoggerPhaseScope("Apply Theme"))
+            using (new LoggerPhaseScope("Apply Theme", true))
             {
                 if (_themes != null && _themes.Count > 0)
                 {
@@ -53,6 +54,8 @@ namespace Microsoft.DocAsCode.Build.Engine
             if (string.IsNullOrEmpty(outputDirectory)) throw new ArgumentNullException(nameof(outputDirectory));
             if (!resourceNames.Any()) return false;
             bool isEmpty = true;
+
+            using (new LoggerPhaseScope("ExportResourceFiles", true))
             using (var templateResource = new CompositeResourceCollectionWithOverridden(resourceNames.Select(s => _finder.Find(s)).Where(s => s != null)))
             {
                 if (templateResource.IsEmpty)
@@ -103,5 +106,4 @@ namespace Microsoft.DocAsCode.Build.Engine
             }
         }
     }
-    
 }

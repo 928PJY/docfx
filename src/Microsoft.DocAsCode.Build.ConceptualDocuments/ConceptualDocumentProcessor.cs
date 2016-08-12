@@ -13,6 +13,7 @@ namespace Microsoft.DocAsCode.Build.ConceptualDocuments
     using Microsoft.DocAsCode.Build.Common;
     using Microsoft.DocAsCode.DataContracts.Common;
     using Microsoft.DocAsCode.Plugins;
+    using Microsoft.DocAsCode.Utility;
 
     [Export(typeof(IDocumentProcessor))]
     public class ConceptualDocumentProcessor : DisposableDocumentProcessor, ISupportIncrementalBuild
@@ -49,12 +50,16 @@ namespace Microsoft.DocAsCode.Build.ConceptualDocuments
                     content[item.Key] = item.Value;
                 }
             }
+
+            var displayLocalPath = PathUtility.MakeRelativePath(EnvironmentContext.BaseDirectory, file.FullPath);
+
             return new FileModel(
                 file,
                 content,
-                serializer: new BinaryFormatter())
+                serializer: Environment.Is64BitProcess ? null : new BinaryFormatter())
             {
-                LocalPathFromRepoRoot = (content["source"] as SourceDetail)?.Remote?.RelativePath
+                LocalPathFromRepoRoot = (content["source"] as SourceDetail)?.Remote?.RelativePath,
+                LocalPathFromRoot = displayLocalPath
             };
         }
 

@@ -44,10 +44,15 @@ namespace Microsoft.DocAsCode.AzureMarkdownRewriters
             {
                 throw new ArgumentException($"{nameof(MarkdownNewLineBlockRule)} should exist!");
             }
-            blockRules.Insert(index + 1, new DfmYamlHeaderBlockRule());
-            blockRules.Insert(index + 2, new AzureIncludeBlockRule());
-            blockRules.Insert(index + 3, new AzureNoteBlockRule());
-            blockRules.Insert(index + 4, new AzureSelectorBlockRule());
+            blockRules.InsertRange(
+                index + 1,
+                new IMarkdownRule[]
+                {
+                    new DfmYamlHeaderBlockRule(),
+                    new AzureIncludeBlockRule(),
+                    new AzureNoteBlockRule(),
+                    new AzureSelectorBlockRule()
+                });
 
             index = blockRules.FindLastIndex(s => s is MarkdownHtmlBlockRule);
             if (index < 1)
@@ -100,10 +105,10 @@ namespace Microsoft.DocAsCode.AzureMarkdownRewriters
                             (IMarkdownRewriteEngine e, AzureBlockquoteBlockToken t) => new MarkdownBlockquoteBlockToken(t.Rule, t.Context, t.Tokens, t.SourceInfo)
                         ),
                         MarkdownTokenRewriterFactory.FromLambda(
-                            (IMarkdownRewriteEngine e, MarkdownImageInlineToken t) => new MarkdownImageInlineToken(t.Rule, t.Context, FixNonMdRelativeFileHref(t.Href, t.Context, t.SourceInfo.Markdown), t.Title, t.Text, t.SourceInfo)
+                            (IMarkdownRewriteEngine e, MarkdownImageInlineToken t) => new MarkdownImageInlineToken(t.Rule, t.Context, FixNonMdRelativeFileHref(t.Href, t.Context, t.SourceInfo.Markdown), t.Title, t.Text, t.SourceInfo, t.LinkType, t.RefId)
                         ),
                         MarkdownTokenRewriterFactory.FromLambda(
-                            (IMarkdownRewriteEngine e, MarkdownLinkInlineToken t) => new MarkdownLinkInlineToken(t.Rule, t.Context, NormalizeAzureLink(t.Href, MarkdownExtension, t.Context, t.SourceInfo.Markdown), t.Title, t.Content, t.SourceInfo)
+                            (IMarkdownRewriteEngine e, MarkdownLinkInlineToken t) => new MarkdownLinkInlineToken(t.Rule, t.Context, NormalizeAzureLink(t.Href, MarkdownExtension, t.Context, t.SourceInfo.Markdown), t.Title, t.Content, t.SourceInfo, t.LinkType, t.RefId)
                         ),
                         MarkdownTokenRewriterFactory.FromLambda(
                             (IMarkdownRewriteEngine e, AzureSelectorBlockToken t) => new DfmSectionBlockToken(t.Rule, t.Context, GenerateAzureSelectorAttributes(t.SelectorType, t.SelectorConditions), t.SourceInfo)

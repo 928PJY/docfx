@@ -15,7 +15,7 @@ namespace Microsoft.DocAsCode.Common.Tests
 
         public LogLevel LogLevelThreshold { get; set; }
 
-        public TestLoggerListener(string phase)
+        public TestLoggerListener(string phase = null)
         {
             Phase = phase;
         }
@@ -30,10 +30,21 @@ namespace Microsoft.DocAsCode.Common.Tests
 
         public void WriteLine(ILogItem item)
         {
-            if (item.Phase == Phase)
+            if (Phase == null || item.Phase == Phase)
             {
                 Items.Add(item);
             }
+        }
+
+        public ILogItem TakeAndRemove()
+        {
+            if (Items.Count == 0)
+            {
+                return null;
+            }
+            var result = Items[0];
+            Items.RemoveAt(0);
+            return result;
         }
     }
 }

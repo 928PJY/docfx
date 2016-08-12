@@ -193,7 +193,7 @@ function zipAssetsPromiseFn(fromDir, destDir) {
     let buffer = zip.generate({type:"nodebuffer", compression: "DEFLATE"});
     fs.unlinkSync(destDir);
     fs.writeFileSync(destDir, buffer);
-    globalOptions.sha1 = sha1(buffer);
+    globalOptions.sha1 = "$sha1       = '" + sha1(buffer) + "'";
     logger.info("Finish zipping assets");
     return Promise.resolve();
   }
@@ -397,11 +397,7 @@ function updateReleasePromiseFn() {
     return new Promise(function(resolve, reject) {
       getLastestReleasePromiseFn()().then(function() {
         let promiseFn = globalOptions.tag_name === globalOptions.version ? deleteAssetsPromiseFn() : createReleasePromiseFn();
-        promiseFn().then(function() {
-          resolve();
-        }).catch(function(err) {
-          reject(err);
-        });
+        promiseFn().then(resolve).catch(reject);
       });
     });
   }
@@ -413,7 +409,9 @@ function updateChocoConfigPromiseFn() {
       if (!process.env.CHOCO_TOKEN) {
         reject(new Error('No chocolatey.org account token in the environment.'));
       }
-
+      if (!globalOptions.rawVersion) {
+        reject(new Error('rawVersion can not be null/empty/undefined when update choco config file'));
+      }
       // update chocolateyinstall.ps1
       let chocoScriptContent = fs.readFileSync(config.choco.chocoScript, "utf8");
       chocoScriptContent = chocoScriptContent
@@ -428,6 +426,18 @@ function updateChocoConfigPromiseFn() {
 
       globalOptions.pkgName = "docfx." + globalOptions.rawVersion + ".nupkg";
       resolve();
+    });
+  }
+}
+
+function pushChocoPackage() {
+  return function() {
+    return new Promise(function(resolve, reject) {
+      if (!globalOptions.pkgName) {
+        reject(new Error('package name can not be null/empty/undefined while pushing choco package'));
+      }
+      let promiseFn = execPromiseFn('choco', ['push', globalOptions.pkgName], config.choco.homeDir);
+      promiseFn().then(resolve).catch(reject);
     });
   }
 }
@@ -480,7 +490,7 @@ let updateChocoReleaseStep = function() {
     updateChocoConfigPromiseFn(),
     execPromiseFn("choco", ['pack'], config.choco.homeDir),
     execPromiseFn("choco", ['apiKey', '-k', process.env.CHOCO_TOKEN, '-source', 'https://chocolatey.org/', config.choco.homeDir]),
-    execPromiseFn("choco", ['push', globalOptions.pkgName], config.choco.homeDir)
+    pushChocoPackage()
   ];
   return serialPromiseFlow(stepsOrder);
 }
@@ -536,17 +546,16 @@ switch (branchValue.toLowerCase()) {
       e2eTestStep,
       // step4: run docfx.exe to generate documentation
       genereateDocsStep,
-      // step5: upload release to myget.org
-      uploadMasterMygetStep,
-      // step6: update gh-pages
+      // step5: update gh-pages
       updateGhPageStep,
-      // step7: zip and upload release
+      // step6: zip and upload release
       updateGithubReleaseStep,
-      // step8: upload to chocolatey.org
-      updateChocoReleaseStep
+      // step7: upload to chocolatey.org
+      updateChocoReleaseStep,
+      // step8: upload release to myget.org
+      uploadMasterMygetStep
     ]);
     break;
   default:
     logger.error("Please specify the *right* repo branch name to run this script");
 }
-

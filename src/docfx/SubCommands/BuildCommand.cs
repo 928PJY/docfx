@@ -34,25 +34,25 @@ namespace Microsoft.DocAsCode.SubCommands
             _version = assembly.GetName().Version.ToString();
             Config = ParseOptions(options);
             SetDefaultConfigValue(Config);
+            EnvironmentContext.BaseDirectory = Path.GetFullPath(string.IsNullOrEmpty(Config.BaseDirectory) ? Environment.CurrentDirectory : Config.BaseDirectory);
             _templateManager = new TemplateManager(assembly, "Template", Config.Templates, Config.Themes, Config.BaseDirectory);
         }
 
         public void Exec(SubCommandRunningContext context)
         {
-            var config = Config;
             // TODO: remove BaseDirectory from Config, it may cause potential issue when abused
-            var baseDirectory = Path.GetFullPath(string.IsNullOrEmpty(config.BaseDirectory) ? Environment.CurrentDirectory : config.BaseDirectory);
+            var baseDirectory = EnvironmentContext.BaseDirectory;
             var intermediateOutputFolder = Path.Combine(baseDirectory, "obj");
-            var outputFolder = Path.GetFullPath(Path.Combine(string.IsNullOrEmpty(config.OutputFolder) ? baseDirectory : config.OutputFolder, config.Destination ?? string.Empty));
+            var outputFolder = Path.GetFullPath(Path.Combine(string.IsNullOrEmpty(Config.OutputFolder) ? baseDirectory : Config.OutputFolder, Config.Destination ?? string.Empty));
 
             BuildDocument(baseDirectory, outputFolder);
 
             _templateManager.ProcessTheme(outputFolder, true);
             // TODO: SEARCH DATA
 
-            if (config?.Serve ?? false)
+            if (Config?.Serve ?? false)
             {
-                ServeCommand.Serve(outputFolder, config.Port);
+                ServeCommand.Serve(outputFolder, Config.Port);
             }
         }
 
@@ -101,7 +101,7 @@ namespace Microsoft.DocAsCode.SubCommands
             config.BaseDirectory = Path.GetDirectoryName(configFile);
 
             MergeOptionsToConfig(options, config);
-            MergeNewFileRepositoryToConfig(config);
+            MergeGitContributeToConfig(config);
             return config;
         }
 
@@ -245,34 +245,47 @@ namespace Microsoft.DocAsCode.SubCommands
             {
                 config.IntermediateFolder = options.IntermediateFolder;
             }
-
-            config.FileMetadata = GetFileMetadataFromOption(options.FileMetadataFilePath, config.FileMetadata);
-            config.GlobalMetadata = GetGlobalMetadataFromOption(options.GlobalMetadata, options.GlobalMetadataFilePath, config.GlobalMetadata);
-        }
-
-        private static void MergeNewFileRepositoryToConfig(BuildJsonConfig config)
-        {
-            GitDetail repoInfoFromBaseDirectory = GitUtility.GetGitDetail(Path.Combine(Environment.CurrentDirectory, config.BaseDirectory));
-            if (repoInfoFromBaseDirectory?.LocalWorkingDirectory != null)
+            if (options.GlobalMetadataFilePaths != null && options.GlobalMetadataFilePaths.Any())
             {
-                config.GlobalMetadata["baseRepositoryDirectory"] = repoInfoFromBaseDirectory.LocalWorkingDirectory;
+                config.GlobalMetadataFilePaths.AddRange(options.GlobalMetadataFilePaths);
             }
 
-            if (repoInfoFromBaseDirectory != null && repoInfoFromBaseDirectory.RelativePath != null)
+            config.GlobalMetadataFilePaths =
+                new ListWithStringFallback(config.GlobalMetadataFilePaths.Select(
+                    path => PathUtility.IsRelativePath(path) ? Path.Combine(config.BaseDirectory, path) : path).Reverse());
+
+            if (options.FileMetadataFilePaths != null && options.FileMetadataFilePaths.Any())
+            {
+                config.FileMetadataFilePaths.AddRange(options.FileMetadataFilePaths);
+            }
+
+            config.FileMetadataFilePaths =
+                new ListWithStringFallback(config.FileMetadataFilePaths.Select(
+                    path => PathUtility.IsRelativePath(path) ? Path.Combine(config.BaseDirectory, path) : path).Reverse());
+
+            config.FileMetadata = GetFileMetadataFromOption(config.FileMetadata, options.FileMetadataFilePath, config.FileMetadataFilePaths);
+            config.GlobalMetadata = GetGlobalMetadataFromOption(config.GlobalMetadata, options.GlobalMetadataFilePath, config.GlobalMetadataFilePaths, options.GlobalMetadata);
+        }
+
+        private static void MergeGitContributeToConfig(BuildJsonConfig config)
+        {
+            GitDetail repoInfoFromBaseDirectory = GitUtility.GetGitDetail(Path.Combine(Environment.CurrentDirectory, config.BaseDirectory));
+
+            if (repoInfoFromBaseDirectory?.RelativePath != null)
             {
                 repoInfoFromBaseDirectory.RelativePath = Path.Combine(repoInfoFromBaseDirectory.RelativePath, DocAsCode.Constants.DefaultOverwriteFolderName);
             }
-            object newFileRepository;
-            if (config.GlobalMetadata.TryGetValue("newFileRepository", out newFileRepository))
+            object gitRespositoryOpenToPublicContributors;
+            if (config.GlobalMetadata.TryGetValue("_gitContribute", out gitRespositoryOpenToPublicContributors))
             {
-                GitDetail repoInfo = null;
+                GitDetail repoInfo;
                 try
                 {
-                    repoInfo = JObject.FromObject(newFileRepository).ToObject<GitDetail>();
+                    repoInfo = JObject.FromObject(gitRespositoryOpenToPublicContributors).ToObject<GitDetail>();
                 }
                 catch (Exception e)
                 {
-                    throw new DocumentException($"Unable to convert newFileRepository to GitDetail in globalMetadata: {e.Message}", e);
+                    throw new DocumentException($"Unable to convert _gitContribute to GitDetail in globalMetadata: {e.Message}", e);
                 }
                 if (repoInfoFromBaseDirectory != null)
                 {
@@ -280,47 +293,38 @@ namespace Microsoft.DocAsCode.SubCommands
                     if (repoInfo.RemoteBranch == null) repoInfo.RemoteBranch = repoInfoFromBaseDirectory.RemoteBranch;
                     if (repoInfo.RemoteRepositoryUrl == null) repoInfo.RemoteRepositoryUrl = repoInfoFromBaseDirectory.RemoteRepositoryUrl;
                 }
-                config.GlobalMetadata["newFileRepository"] = repoInfo;
+                config.GlobalMetadata["_gitContribute"] = repoInfo;
             }
             else
             {
-                config.GlobalMetadata["newFileRepository"] = repoInfoFromBaseDirectory;
+                config.GlobalMetadata["_gitContribute"] = repoInfoFromBaseDirectory;
             }
         }
 
-        internal static Dictionary<string, FileMetadataPairs> GetFileMetadataFromOption(string fileMetadataFilePath, Dictionary<string, FileMetadataPairs> fileMetadataFromConfig)
+        internal static Dictionary<string, FileMetadataPairs> GetFileMetadataFromOption(Dictionary<string, FileMetadataPairs> fileMetadataFromConfig, string fileMetadataFilePath, ListWithStringFallback fileMetadataFilePaths)
         {
-            Dictionary<string, FileMetadataPairs> fileMetadata = null;
+            var fileMetadata = new Dictionary<string, FileMetadataPairs>();
+
+            if (fileMetadataFilePaths != null)
+            {
+                foreach (var filePath in fileMetadataFilePaths)
+                {
+                    fileMetadata = MergeMetadataFromFile("fileMetadata", fileMetadata, filePath, path => JsonUtility.Deserialize<Dictionary<string, FileMetadataPairs>>(path), MergeFileMetadataPairs);
+                }
+            }
+
             if (fileMetadataFilePath != null)
             {
-                try
-                {
-                    fileMetadata = JsonUtility.Deserialize<BuildJsonConfig>(fileMetadataFilePath).FileMetadata;
-                    if (fileMetadata == null)
-                    {
-                        Logger.LogWarning($"File from \"--fileMetadataFile {fileMetadataFilePath}\" does not contain \"fileMetadata\" definition, ignored.");
-                    }
-                    else
-                    {
-                        Logger.LogInfo($"File metadata from \"--fileMetadataFile {fileMetadataFilePath}\" overrides the one defined in config file");
-                    }
-                }
-                catch (FileNotFoundException)
-                {
-                    Logger.LogWarning($"Invalid option \"--fileMetadataFile {fileMetadataFilePath}\": file does not exist, ignored.");
-                }
-                catch (JsonException e)
-                {
-                    Logger.LogWarning($"File from \"--fileMetadataFile {fileMetadataFilePath}\" is not a valid JSON format file metadata, ignored: {e.Message}");
-                }
+                fileMetadata = MergeMetadataFromFile("fileMetadata", fileMetadata, fileMetadataFilePath, path => JsonUtility.Deserialize<BuildJsonConfig>(path)?.FileMetadata, MergeFileMetadataPairs);
             }
 
-            return MergeDictionary(
-                new DictionaryMergeContext<FileMetadataPairs>("fileMetadata from config file", fileMetadataFromConfig),
-                new DictionaryMergeContext<FileMetadataPairs>("fileMetadata command option", fileMetadata));
+            return OptionMerger.MergeDictionary(
+                new DictionaryMergeContext<FileMetadataPairs>("fileMetadata from docfx config file", fileMetadataFromConfig),
+                new DictionaryMergeContext<FileMetadataPairs>("fileMetadata from fileMetadata config file", fileMetadata),
+                MergeFileMetadataPairs);
         }
 
-        internal static Dictionary<string, object> GetGlobalMetadataFromOption(string globalMetadataContent, string globalMetadataFilePath, Dictionary<string, object> globalMetadataFromConfig)
+        internal static Dictionary<string, object> GetGlobalMetadataFromOption(Dictionary<string, object> globalMetadataFromConfig, string globalMetadataFilePath, ListWithStringFallback globalMetadataFilePaths, string globalMetadataContent)
         {
             Dictionary<string, object> globalMetadata = null;
             if (globalMetadataContent != null)
@@ -338,33 +342,75 @@ namespace Microsoft.DocAsCode.SubCommands
                 }
             }
 
-            if (globalMetadataFilePath != null)
+            if (globalMetadataFilePaths != null)
             {
-                try
+                foreach (var filePath in globalMetadataFilePaths)
                 {
-                    var globalMetadataFromFile = JsonUtility.Deserialize<BuildJsonConfig>(globalMetadataFilePath).GlobalMetadata;
-                    if (globalMetadataFromFile == null)
-                    {
-                        Logger.LogWarning($" File from \"--globalMetadataFile {globalMetadataFilePath}\" does not contain \"globalMetadata\" definition.");
-                    }
-                    else
-                    {
-                        globalMetadata = MergeDictionary(new DictionaryMergeContext<object>("--globalMetadataFile", globalMetadataFromFile), new DictionaryMergeContext<object>("--globalMetadata", globalMetadata));
-                    }
-                }
-                catch (FileNotFoundException)
-                {
-                    Logger.LogWarning($"Invalid option \"--globalMetadataFile {globalMetadataFilePath}\": file does not exist, ignored.");
-                }
-                catch (JsonException e)
-                {
-                    Logger.LogWarning($"File from \"--globalMetadataFile {globalMetadataFilePath}\" is not a valid JSON format global metadata, ignored: {e.Message}");
+                    globalMetadata = MergeMetadataFromFile("globalMetadata", globalMetadata, filePath, path => JsonUtility.Deserialize<Dictionary<string, object>>(path), MergeGlobalMetadataItem);
                 }
             }
 
-            return MergeDictionary(
-                new DictionaryMergeContext<object>("globalMetadata from config file", globalMetadataFromConfig),
-                new DictionaryMergeContext<object>("globalMetadata command option", globalMetadata));
+            if (globalMetadataFilePath != null)
+            {
+                globalMetadata = MergeMetadataFromFile("globalMetadata", globalMetadata, globalMetadataFilePath, path => JsonUtility.Deserialize<BuildJsonConfig>(path)?.GlobalMetadata, MergeGlobalMetadataItem);
+            }
+
+            return OptionMerger.MergeDictionary(
+                new DictionaryMergeContext<object>("globalMetadata from docfx config file", globalMetadataFromConfig),
+                new DictionaryMergeContext<object>("globalMetadata merged with command option and globalMetadata config file", globalMetadata),
+                MergeGlobalMetadataItem);
+        }
+
+        private static Dictionary<string, T> MergeMetadataFromFile<T>(
+            string metadataType,
+            Dictionary<string, T> originalMetadata,
+            string metadataFilePath,
+            Func<string, Dictionary<string, T>> metadataFileLoader,
+            OptionMerger.Merger<T> merger)
+        {
+            Dictionary<string, T> metadata = null;
+            try
+            {
+                if (metadataFilePath != null)
+                {
+                    metadata = metadataFileLoader(metadataFilePath);
+                }
+
+                if (metadata == null)
+                {
+                    Logger.LogWarning($"File from \"{metadataType} config file {metadataFilePath}\" does not contain \"{metadataType}\" definition.");
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Logger.LogWarning($"Invalid option \"{metadataType} config file {metadataFilePath}\": file does not exist, ignored.");
+            }
+            catch (JsonException e)
+            {
+                Logger.LogWarning($"File from \"{metadataType} config file {metadataFilePath}\" is not in valid JSON format, ignored: {e.Message}");
+            }
+
+            if (metadata != null)
+            {
+                return OptionMerger.MergeDictionary(
+                    new DictionaryMergeContext<T>($"globalMetadata config file {metadataFilePath}", metadata),
+                    new DictionaryMergeContext<T>("previous global metadata", originalMetadata),
+                    merger);
+            }
+
+            return originalMetadata;
+        }
+
+        private static object MergeGlobalMetadataItem(string key, MergeContext<object> item, MergeContext<object> overrideItem)
+        {
+            Logger.LogWarning($"Both {item.Name} and {overrideItem.Name} contain definition for \"{key}\", the one from \"{overrideItem.Name}\" overrides the one from \"{item.Name}\".");
+            return overrideItem.Item;
+        }
+
+        private static FileMetadataPairs MergeFileMetadataPairs(string key, MergeContext<FileMetadataPairs> pairs, MergeContext<FileMetadataPairs> overridePairs)
+        {
+            var mergedItems = pairs.Item.Items.Concat(overridePairs.Item.Items).ToList();
+            return new FileMetadataPairs(mergedItems);
         }
 
         private static JsonSerializer GetToObjectSerializer()
@@ -374,51 +420,6 @@ namespace Microsoft.DocAsCode.SubCommands
             jsonSerializer.ReferenceLoopHandling = ReferenceLoopHandling.Serialize;
             jsonSerializer.Converters.Add(new JObjectDictionaryToObjectDictionaryConverter());
             return jsonSerializer;
-        }
-
-
-        private static Dictionary<string, T> MergeDictionary<T>(DictionaryMergeContext<T> item, DictionaryMergeContext<T> overrideItem)
-        {
-            Dictionary<string, T> merged;
-            if (overrideItem == null || overrideItem.Item == null)
-            {
-                merged = new Dictionary<string, T>();
-            }
-            else
-            {
-                merged = new Dictionary<string, T>(overrideItem.Item);
-            }
-            if (item == null || item.Item == null)
-            {
-                return merged;
-            }
-            else
-            {
-                foreach (var pair in item.Item)
-                {
-                    if (merged.ContainsKey(pair.Key))
-                    {
-                        Logger.LogWarning($"Both {item.Name} and {overrideItem.Name} contain definition for \"{pair.Key}\", the one from \"{overrideItem.Name}\" overrides the one from \"{item.Name}\".");
-                    }
-                    else
-                    {
-                        merged[pair.Key] = pair.Value;
-                    }
-                }
-            }
-            return merged;
-        }
-
-        private sealed class DictionaryMergeContext<T>
-        {
-            public string Name { get; }
-            public Dictionary<string, T> Item { get; }
-
-            public DictionaryMergeContext(string name, Dictionary<string, T> item)
-            {
-                Name = name;
-                Item = item;
-            }
         }
 
         private sealed class BuildConfig
@@ -445,20 +446,20 @@ namespace Microsoft.DocAsCode.SubCommands
             bool created = false;
             try
             {
-                created = _templateManager.TryExportTemplateFiles(pluginFilePath, @"^plugins/.*");
+                created = _templateManager.TryExportTemplateFiles(pluginFilePath, @"^(?:plugins|md\.styles)/.*");
                 if (created)
                 {
-                    BuildDocumentWithPlugin(Config, _templateManager, baseDirectory, outputDirectory, pluginBaseFolder, Path.Combine(pluginFilePath, "plugins"));
+                    BuildDocumentWithPlugin(Config, _templateManager, baseDirectory, outputDirectory, pluginBaseFolder, Path.Combine(pluginFilePath, "plugins"), pluginFilePath);
                 }
                 else
                 {
                     if (Directory.Exists(defaultPluginFolderPath))
                     {
-                        BuildDocumentWithPlugin(Config, _templateManager, baseDirectory, outputDirectory, pluginBaseFolder, defaultPluginFolderPath);
+                        BuildDocumentWithPlugin(Config, _templateManager, baseDirectory, outputDirectory, pluginBaseFolder, defaultPluginFolderPath, null);
                     }
                     else
                     {
-                        DocumentBuilderWrapper.BuildDocument(Config, _templateManager, baseDirectory, outputDirectory, null);
+                        DocumentBuilderWrapper.BuildDocument(Config, _templateManager, baseDirectory, outputDirectory, null, null);
                     }
                 }
             }
@@ -483,7 +484,7 @@ namespace Microsoft.DocAsCode.SubCommands
             }
         }
 
-        private static void BuildDocumentWithPlugin(BuildJsonConfig config, TemplateManager manager, string baseDirectory, string outputDirectory, string applicationBaseDirectory, string pluginDirectory)
+        private static void BuildDocumentWithPlugin(BuildJsonConfig config, TemplateManager manager, string baseDirectory, string outputDirectory, string applicationBaseDirectory, string pluginDirectory, string templateDirectory)
         {
             AppDomain builderDomain = null;
             try
@@ -500,7 +501,7 @@ namespace Microsoft.DocAsCode.SubCommands
 
                 builderDomain = AppDomain.CreateDomain("document builder domain", null, setup);
                 builderDomain.UnhandledException += (s, e) => { };
-                builderDomain.DoCallBack(new DocumentBuilderWrapper(config, manager, baseDirectory, outputDirectory, pluginDirectory, new CrossAppDomainListener()).BuildDocument);
+                builderDomain.DoCallBack(new DocumentBuilderWrapper(config, manager, baseDirectory, outputDirectory, pluginDirectory, new CrossAppDomainListener(), templateDirectory).BuildDocument);
             }
             finally
             {

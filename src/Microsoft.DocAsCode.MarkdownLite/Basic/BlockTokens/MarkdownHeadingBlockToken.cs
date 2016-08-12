@@ -5,7 +5,7 @@ namespace Microsoft.DocAsCode.MarkdownLite
 {
     using System.Collections.Generic;
 
-    public class MarkdownHeadingBlockToken : IMarkdownToken, IMarkdownRewritable<MarkdownHeadingBlockToken>
+    public class MarkdownHeadingBlockToken : IMarkdownExpression, IMarkdownRewritable<MarkdownHeadingBlockToken>
     {
         public MarkdownHeadingBlockToken(IMarkdownRule rule, IMarkdownContext context, InlineContent content, string id, int depth, SourceInfo sourceInfo)
         {
@@ -39,7 +39,7 @@ namespace Microsoft.DocAsCode.MarkdownLite
             return new MarkdownHeadingBlockToken(Rule, Context, c, Id, Depth, SourceInfo);
         }
 
-        public MarkdownHeadingBlockToken RewriteId(Dictionary<string, int> idTable)
+        internal MarkdownHeadingBlockToken RewriteId(Dictionary<string, int> idTable)
         {
             var newId = GenerateNewId(idTable, Id);
             if (string.Equals(newId, Id))
@@ -54,15 +54,17 @@ namespace Microsoft.DocAsCode.MarkdownLite
             int count;
             if (idTable.TryGetValue(Id, out count))
             {
-                var newId = string.Concat(Id, "-", count);
+                var newId = Id + "-" + count.ToString();
                 idTable[Id] = count + 1;
                 return GenerateNewId(idTable, newId);
             }
             else
             {
-                idTable[Id] = 0;
+                idTable[Id] = 1;
                 return Id;
             }
         }
+
+        public IEnumerable<IMarkdownToken> GetChildren() => Content.Tokens;
     }
 }

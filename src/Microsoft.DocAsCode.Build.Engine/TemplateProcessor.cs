@@ -20,7 +20,7 @@ namespace Microsoft.DocAsCode.Build.Engine
 
         private readonly TemplateCollection _templateCollection;
 
-        public static readonly TemplateProcessor DefaultProcessor = new TemplateProcessor(new EmptyResourceCollection(), 1);
+        public static readonly TemplateProcessor DefaultProcessor = new TemplateProcessor(new EmptyResourceCollection(), null, 1);
 
         public IDictionary<string, string> Tokens { get; }
 
@@ -31,7 +31,7 @@ namespace Microsoft.DocAsCode.Build.Engine
         /// </summary>
         /// <param name="templateName"></param>
         /// <param name="resourceProvider"></param>
-        public TemplateProcessor(ResourceCollection resourceProvider, int maxParallelism = 0)
+        public TemplateProcessor(ResourceCollection resourceProvider, DocumentBuildContext context, int maxParallelism = 0)
         {
             if (maxParallelism <= 0)
             {
@@ -39,7 +39,7 @@ namespace Microsoft.DocAsCode.Build.Engine
             }
 
             _resourceProvider = resourceProvider;
-            _templateCollection = new TemplateCollection(resourceProvider, maxParallelism);
+            _templateCollection = new TemplateCollection(resourceProvider, context, maxParallelism);
             Tokens = LoadTokenJson(resourceProvider) ?? new Dictionary<string, string>();
         }
 
@@ -65,7 +65,7 @@ namespace Microsoft.DocAsCode.Build.Engine
 
         internal List<ManifestItem> Process(List<InternalManifestItem> manifest, DocumentBuildContext context, ApplyTemplateSettings settings, IDictionary<string, object> globals = null)
         {
-            using (new LoggerPhaseScope("Apply Templates"))
+            using (new LoggerPhaseScope("Apply Templates", true))
             {
                 if (globals == null)
                 {
@@ -186,48 +186,6 @@ namespace Microsoft.DocAsCode.Build.Engine
             }
 
             return JsonUtility.FromJsonString<Dictionary<string, string>>(tokenJson);
-        }
-
-        public static void SaveManifest(List<ManifestItem> manifest, List<HomepageInfo> homepages, List<string> xrefMaps, string outputDirectory)
-        {
-            // TODO: remove after post processor is extracted out of document builder
-            DocumentBuilder.RemoveDuplicateOutputFiles(manifest);
-
-            // Save manifest from template
-            // TODO: Keep .manifest for backward-compatability, will remove next sprint
-            var manifestPath = Path.Combine(outputDirectory ?? string.Empty, Constants.ObsoleteManifestFileName);
-            var deprecatedManifest = Transform(manifest);
-            JsonUtility.Serialize(manifestPath, deprecatedManifest);
-            // Logger.LogInfo($"Manifest file saved to {manifestPath}. NOTE: This file is out-of-date and will be removed in version 1.8, if you rely on this file, please change to use {Constants.ManifestFileName} instead.");
-
-            var manifestJsonPath = Path.Combine(outputDirectory ?? string.Empty, Constants.ManifestFileName);
-            object xrefMapsObject;
-            if (xrefMaps.Count == 1)
-            {
-                xrefMapsObject = xrefMaps[0];
-            }
-            else
-            {
-                xrefMapsObject = xrefMaps;
-            }
-            var manifestObject = new Manifest
-            {
-                Homepages = homepages,
-                Files = manifest,
-                XRefMap = xrefMapsObject,
-            };
-            JsonUtility.Serialize(manifestJsonPath, manifestObject);
-            Logger.LogInfo($"Manifest file saved to {manifestJsonPath}.");
-        }
-
-        private static List<DeprecatedManifestItem> Transform(List<ManifestItem> manifest)
-        {
-            return manifest.Select(item => new DeprecatedManifestItem
-            {
-                DocumentType = item.DocumentType,
-                OriginalFile = item.OriginalFile,
-                OutputFiles = item.OutputFiles.ToDictionary(k => k.Key, k => k.Value.RelativePath)
-            }).ToList();
         }
 
         public void Dispose()

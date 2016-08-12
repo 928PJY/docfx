@@ -11,7 +11,10 @@ namespace Microsoft.DocAsCode.Build.Engine
     {
         public string DocumentType { get; set; }
 
-        public string LocalPathFromRepoRoot { get; set; }
+        /// <summary>
+        /// relative path from docfx.json
+        /// </summary>
+        public string LocalPathFromRoot { get; set; }
 
         public string Key { get; set; }
 

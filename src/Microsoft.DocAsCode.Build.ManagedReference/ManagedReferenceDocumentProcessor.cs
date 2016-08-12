@@ -31,9 +31,19 @@ namespace Microsoft.DocAsCode.Build.ManagedReference
             switch (file.Type)
             {
                 case DocumentType.Article:
-                    if (".yml".Equals(Path.GetExtension(file.File), StringComparison.OrdinalIgnoreCase))
+                    if (".yml".Equals(Path.GetExtension(file.File), StringComparison.OrdinalIgnoreCase) ||
+                        ".yaml".Equals(Path.GetExtension(file.File), StringComparison.OrdinalIgnoreCase))
                     {
-                        return ProcessingPriority.Normal;
+                        var mime = YamlMime.ReadMime(Path.Combine(file.BaseDir, file.File));
+                        switch (mime)
+                        {
+                            case YamlMime.ManagedReference:
+                                return ProcessingPriority.Normal;
+                            case null:
+                                return ProcessingPriority.BelowNormal;
+                            default:
+                                return ProcessingPriority.NotSupported;
+                        }
                     }
 
                     if (".csyml".Equals(Path.GetExtension(file.File), StringComparison.OrdinalIgnoreCase) ||
@@ -41,6 +51,7 @@ namespace Microsoft.DocAsCode.Build.ManagedReference
                     {
                         return ProcessingPriority.Normal;
                     }
+
                     break;
                 case DocumentType.Overwrite:
                     if (".md".Equals(Path.GetExtension(file.File), StringComparison.OrdinalIgnoreCase))
@@ -78,19 +89,14 @@ namespace Microsoft.DocAsCode.Build.ManagedReference
                             }
                         }
                     }
-                    var filePath = Path.Combine(file.BaseDir, file.File);
-                    var displayLocalPath = filePath.ToDisplayPath();
 
-                    object baseDirectory;
-                    if (metadata.TryGetValue("baseRepositoryDirectory", out baseDirectory))
-                    {
-                        displayLocalPath = PathUtility.MakeRelativePath((string)baseDirectory, filePath);
-                    }
+                    var displayLocalPath = PathUtility.MakeRelativePath(EnvironmentContext.BaseDirectory, file.FullPath);
 
-                    return new FileModel(file, page, serializer: new BinaryFormatter())
+                    return new FileModel(file, page, serializer: Environment.Is64BitProcess ? null : new BinaryFormatter())
                     {
                         Uids = (from item in page.Items select new UidDefinition(item.Uid, displayLocalPath)).ToImmutableArray(),
                         LocalPathFromRepoRoot = displayLocalPath,
+                        LocalPathFromRoot = displayLocalPath
                     };
                 case DocumentType.Overwrite:
                     // TODO: Refactor current behavior that overwrite file is read multiple times by multiple processors

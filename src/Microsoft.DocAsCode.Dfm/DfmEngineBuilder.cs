@@ -7,7 +7,6 @@ namespace Microsoft.DocAsCode.Dfm
     using System.Collections.Immutable;
     using System.Composition.Hosting;
     using System.Linq;
-    using System.IO;
 
     using Microsoft.DocAsCode.Common;
     using Microsoft.DocAsCode.Dfm.MarkdownValidators;
@@ -15,11 +14,9 @@ namespace Microsoft.DocAsCode.Dfm
 
     public class DfmEngineBuilder : GfmEngineBuilder
     {
-        public const string DefaultValidatorName = "default";
-
         private readonly string _baseDir;
 
-        public DfmEngineBuilder(Options options, string baseDir = null) : base(options)
+        public DfmEngineBuilder(Options options, string baseDir = null, string templateDir = null) : base(options)
         {
             _baseDir = baseDir ?? string.Empty;
             var inlineRules = InlineRules.ToList();
@@ -56,11 +53,18 @@ namespace Microsoft.DocAsCode.Dfm
             {
                 throw new ArgumentException("MarkdownNewLineBlockRule should exist!");
             }
-            blockRules.Insert(index + 1, new DfmIncludeBlockRule());
-            blockRules.Insert(index + 2, new DfmYamlHeaderBlockRule());
-            blockRules.Insert(index + 3, new DfmSectionBlockRule());
-            blockRules.Insert(index + 4, new DfmFencesBlockRule());
-            blockRules.Insert(index + 5, new DfmNoteBlockRule());
+
+            blockRules.InsertRange(
+                index + 1,
+                new IMarkdownRule[]
+                {
+                    new DfmIncludeBlockRule(),
+                    new DfmVideoBlockRule(),
+                    new DfmYamlHeaderBlockRule(),
+                    new DfmSectionBlockRule(),
+                    new DfmFencesBlockRule(),
+                    new DfmNoteBlockRule()
+                });
 
             var gfmIndex = blockRules.FindIndex(item => item is GfmParagraphBlockRule);
             if (gfmIndex < 0)
@@ -79,7 +83,7 @@ namespace Microsoft.DocAsCode.Dfm
             InlineRules = inlineRules.ToImmutableList();
             BlockRules = blockRules.ToImmutableList();
 
-            Rewriter = InitMarkdownStyle(GetContainer(), baseDir);
+            Rewriter = InitMarkdownStyle(GetContainer(), baseDir, templateDir);
         }
 
         private CompositionHost GetContainer()
@@ -93,47 +97,17 @@ namespace Microsoft.DocAsCode.Dfm
                 .CreateContainer();
         }
 
-        private static IMarkdownTokenRewriter InitMarkdownStyle(CompositionHost host, string baseDir)
+        private static IMarkdownTokenRewriter InitMarkdownStyle(CompositionHost host, string baseDir, string templateDir)
         {
             try
             {
-                var builder = new MarkdownValidatorBuilder(host);
-                if (!TryLoadValidatorConfig(baseDir, builder))
-                {
-                    builder.AddValidators(DefaultValidatorName);
-                }
-                return builder.Create();
+                return MarkdownValidatorBuilder.Create(host, baseDir, templateDir).CreateRewriter();
             }
             catch (Exception ex)
             {
                 Logger.LogWarning($"Fail to init markdown style, details:{Environment.NewLine}{ex.ToString()}");
             }
             return null;
-        }
-
-        private static bool TryLoadValidatorConfig(string baseDir, MarkdownValidatorBuilder builder)
-        {
-            if (string.IsNullOrEmpty(baseDir))
-            {
-                return false;
-            }
-            var configFile = Path.Combine(baseDir, MarkdownSytleConfig.MarkdownStyleFileName);
-            if (!File.Exists(configFile))
-            {
-                return false;
-            }
-            var config = JsonUtility.Deserialize<MarkdownSytleConfig>(configFile);
-            if (config.Rules != null &&
-                !config.Rules.Any(r => r.RuleName == DefaultValidatorName))
-            {
-                builder.AddValidators(DefaultValidatorName);
-            }
-            builder.AddValidators(
-                from r in config.Rules ?? new MarkdownValidationRule[0]
-                where !r.Disable
-                select r.RuleName);
-            builder.AddTagValidators(config.TagRules ?? new MarkdownTagValidationRule[0]);
-            return true;
         }
 
         public DfmEngine CreateDfmEngine(object renderer)

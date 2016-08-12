@@ -1,9 +1,44 @@
-Version Notes (Current Version: v2.2)
+Version Notes (Current Version: v2.4)
 =======================================
-v2.2(Pre-Release)
+v2.4(Pre-Release)
 -----------
-1.  Fix bug: syntax for static class is incorrect.
-2.  Support plug-in for post processor
+
+v2.3
+-----------
+1.  Support emoji in markdown content.
+2.  Upgrade yamldotnet to 3.9.
+3.  Refine markdown validation.
+4.  Support separated meta json file.
+5.  Change `hightlight.js` theme to `github-gist`.
+6.  Support '.json' as supported swagger file extension.
+7.  Support `topicHref` and `tocHref` to specify homepage toc.
+8.  Support customized contribute repository and branch for "Improve this Doc" button. (https://github.com/dotnet/docfx/issues/482)
+9.  Improve message for `docfx.exe template` command.
+
+v2.2.2
+-----------
+1. Fix bug in `.manifest` file.
+
+v2.2.1
+-----------
+1. Fix bug when metadata incremental check.
+2. Move post process out of DocumentBuilder.
+
+v2.2
+-----------
+1.  Support multi-version site. (https://github.com/dotnet/docfx/issues/396)
+2.  Support loop reference for Swagger Rest API. (https://github.com/dotnet/docfx/issues/223)
+3.  Support plug-in for post processor.
+4.  Support href for see/seealso tags.
+5.  Improve API reference documentation of namespace and enum.
+6.  Update prerequisite to build docfx.
+7.  Update manifest schema.
+8.  Add chocolatey support in CI script.
+9.  Provide with options in build.cmd.
+10.  Bug fixes:
+    1. syntax for static class is incorrect.
+    2. improve warning message about global namespace class. (https://github.com/dotnet/docfx/issues/417)
+    3. fix normalizexml bug for empty `<code></code>` in tripleslashcomment.
 
 v2.1
 -----------
@@ -42,8 +77,8 @@ v2.0
 3.  Provide more information for API reference documentation
     1. display inherited members
     2. display overridden members
-    3. display implemented interface 
-    4. seperate category for Explicit Interface Implementation
+    3. display implemented interface
+    4. separate category for Explicit Interface Implementation
 4.  Rest api - Enable **Tag** in Swagger file to organize the **API**s.
 
 v1.9
@@ -54,7 +89,7 @@ v1.9
 
     ```js
     exports.transform = function (model){
-        // transform the model 
+        // transform the model
         return model;
     }
     ```
@@ -255,3 +290,4 @@ v0.3
 -------------
 1. Support Static Website Templates
 2. Schema change to docfx.json
+

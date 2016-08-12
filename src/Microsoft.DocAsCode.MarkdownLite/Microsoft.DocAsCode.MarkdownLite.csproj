@@ -57,6 +57,7 @@
     <Compile Include="MarkdownLinkType.cs" />
     <Compile Include="Rewriters\IInitializable.cs" />
     <Compile Include="Rewriters\MarkdownInitializableLambdaTokenRewriter.cs" />
+    <Compile Include="JsonRenderer.cs" />
     <Compile Include="SourceInfo.cs" />
     <Compile Include="MarkdownEngine.cs" />
     <Compile Include="MarkdownParsingContext.cs" />

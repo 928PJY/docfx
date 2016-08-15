@@ -12,7 +12,7 @@ namespace Microsoft.DocAsCode.Build.Engine
     using Microsoft.DocAsCode.MarkdownLite;
     using Microsoft.DocAsCode.Plugins;
 
-    [Export("jsonServiceProvider", typeof(IMarkdownServiceProvider))]
+    [Export("jsonTokenTree", typeof(IMarkdownServiceProvider))]
     public class JsonServiceProvider: IMarkdownServiceProvider
     {
         public IMarkdownService CreateMarkdownService(MarkdownServiceParameters parameters)

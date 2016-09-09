@@ -8,6 +8,8 @@ export class MarkdownDocumentContentProvider implements TextDocumentContentProvi
     private _context: ExtensionContext;
     private _onDidChange = new EventEmitter<Uri>();
     private _htmlContent: string;
+    public port;
+    public fileName;
 
     constructor(context: ExtensionContext) {
         this._context = context;
@@ -28,12 +30,14 @@ export class MarkdownDocumentContentProvider implements TextDocumentContentProvi
                 `<link rel="stylesheet" type="text/css" href="${this.getMediaPath("markdown.css")}" >`,
                 `<base href="${document.uri.toString(true)}">`,
                 "</head>",
-                "<body>"].join("\n");
+                `<body><!--` + this.port.toString() + `--><!--` + this.fileName + `-->`].join("\n");
 
             const body = this._htmlContent || "";
 
             const tail = [
+                `<script type="text/javascript" src="${this.getMediaPath(`jquery-1.6.2.min.js`)}"></script>`,
                 `<script type="text/javascript" src="${this.getMediaPath("highlight.pack.js")}"></script>`,
+                `<script type="text/javascript" src="${this.getMediaPath("previewMatch.js")}"></script>`,
                 `<script>hljs.initHighlightingOnLoad();</script>`,
                 "</body>",
                 "</html>"

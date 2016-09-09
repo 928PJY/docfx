@@ -16,16 +16,16 @@ export class TokenTreeCore {
     private _documentUri: Uri;
     private ENDCODE = 7; // '\a'
 
-    constructor(context: ExtensionContext, port) {
+    constructor(context: ExtensionContext) {
         // TODO: make path configurable
-        let extpath = context.asAbsolutePath("./DfmParse/TokenTree.exe");
+        let extpath = context.asAbsolutePath("./DfmParse/Microsoft.DocAsCode.Dfm.VscPreview.exe");
         this._spawn = childProcess.spawn(extpath);
         if (!this._spawn.pid) {
             window.showErrorMessage("Error:DfmProcess lost!");
             return;
         }
         this._waiting = false;
-        this.provider = new TokenTreeContentProvider(context, port);
+        this.provider = new TokenTreeContentProvider(context);
         let that = this;
 
         this._spawn.stdout.on("data", function (data) {
@@ -75,6 +75,7 @@ export class TokenTreeCore {
         }
         if (doc.languageId === "markdown") {
             let numOfRow = doc.lineCount;
+            this._spawn.stdin.write(this.appendWrap("jsonmarkup"));
             // this._spawn.stdin.write(this.appendWrap(rootPath));
             // this._spawn.stdin.write(this.appendWrap(filePath));
             this._spawn.stdin.write(this.appendWrap(numOfRow));

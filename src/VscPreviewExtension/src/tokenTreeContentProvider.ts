@@ -8,10 +8,9 @@ export class TokenTreeContentProvider implements TextDocumentContentProvider {
     private _context: ExtensionContext;
     private _onDidChange = new EventEmitter<Uri>();
     private _jsonContent = "";
-    private _port;
+    public port;
 
-    constructor(context: ExtensionContext, port) {
-        this._port = port;
+    constructor(context: ExtensionContext) {
         this._context = context;
     }
 
@@ -28,8 +27,8 @@ export class TokenTreeContentProvider implements TextDocumentContentProvider {
                 `<meta http-equiv="Content-type" content="text/html;charset=UTF-8">`,
                 `<link rel="stylesheet" type="text/css" href="${this.getMediaPath(`token.css`)}" >`,
                 `</head>`,
-                `<body><!-- ` + this._jsonContent.substring(0, this._jsonContent.length - 1) + `--><!--` + this._port.toString() + `-->`,
-                `<div id="tree-container"></div>`,
+                `<body><!-- ` + this._jsonContent.substring(0, this._jsonContent.length - 1) + `--><!--` + this.port.toString() + `-->`,
+                `<div id="body"></div>`,
                 `<script type="text/javascript" src="${this.getMediaPath(`jquery-1.6.2.min.js`)}"></script>`,
                 `<script type="text/javascript" src="${this.getMediaPath(`d3.v3.min.js`)}"></script>`,
                 `<script type="text/javascript" src="${this.getMediaPath(`buildTree.js`)}"></script>`,
@@ -37,7 +36,7 @@ export class TokenTreeContentProvider implements TextDocumentContentProvider {
                 `var Jsonstr = document.body.firstChild.nodeValue;`,
 
                 `var treeData = JSON.parse(Jsonstr);`,
-                `buildTree("#tree-container" , treeData);`,
+                `buildTree("#body" , treeData);`,
                 `</script>`,
                 `</body>`,
                 `</html>`

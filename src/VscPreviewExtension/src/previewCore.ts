@@ -19,7 +19,7 @@ export class PreviewCore {
 
     constructor(context: ExtensionContext) {
         // TODO: make path configurable
-        let extpath = context.asAbsolutePath("./DfmParse/PreviewCore.exe");
+        let extpath = context.asAbsolutePath("./DfmParse/Microsoft.DocAsCode.Dfm.VscPreview.exe");
         this._spawn = childProcess.spawn(extpath);
         if (!this._spawn.pid) {
             window.showErrorMessage("Error:DfmProcess lost!");
@@ -66,7 +66,7 @@ export class PreviewCore {
         let fileName = doc.fileName;
         let rootPath = workspace.rootPath;
         let filePath;
-        if (!rootPath) {
+        if (!rootPath || !fileName.includes(rootPath)) {
             let indexOfFilename = fileName.lastIndexOf("\\");
             rootPath = fileName.substr(0, indexOfFilename);
             filePath = fileName.substring(indexOfFilename + 1);
@@ -76,6 +76,7 @@ export class PreviewCore {
         }
         if (doc.languageId === "markdown") {
             let numOfRow = doc.lineCount;
+            this._spawn.stdin.write(this.appendWrap("dfmmarkup"));
             this._spawn.stdin.write(this.appendWrap(rootPath));
             this._spawn.stdin.write(this.appendWrap(filePath));
             this._spawn.stdin.write(this.appendWrap(numOfRow));

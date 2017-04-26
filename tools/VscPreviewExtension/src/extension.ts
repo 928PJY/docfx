@@ -7,24 +7,27 @@ import * as path from "path";
 
 import { DfmPreviewProcessor } from "./Processors/dfmPreviewProcessor";
 import { TokenTreeProcessor } from "./Processors/tokenTreeProcessor";
+import { DocFXPreviewProcessor } from "./Processors/docfxPreviewProcessor";
 import { PreviewProcessor } from "./Processors/previewProcessor";
 import { ContentProvider } from "./ContentProvider/contentProvider";
-import * as ConstVariable from "./constVariables/commonVariables";
-import { PreviewType } from "./constVariables/previewType";
+import * as ConstVariables from "./ConstVariables/commonVariables";
+import { PreviewType } from "./ConstVariables/previewType";
 
 export function activate(context: ExtensionContext) {
     let dfmPreviewProcessor = new DfmPreviewProcessor(context);
     let tokenTreeProcessor = new TokenTreeProcessor(context);
-    let previewProviderRegistration = workspace.registerTextDocumentContentProvider(ConstVariable.markdownScheme, dfmPreviewProcessor.provider);
-    let tokenTreeProviderRegistration = workspace.registerTextDocumentContentProvider(ConstVariable.tokenTreeScheme, tokenTreeProcessor.provider);
+    let docFXPreviewProcessor = new DocFXPreviewProcessor(context);
+    let previewProviderRegistration = workspace.registerTextDocumentContentProvider(ConstVariables.markdownScheme, dfmPreviewProcessor.provider);
+    let tokenTreeProviderRegistration = workspace.registerTextDocumentContentProvider(ConstVariables.tokenTreeScheme, tokenTreeProcessor.provider);
 
     // Event register
     let showPreviewRegistration = commands.registerCommand("DocFX.showDfmPreview", uri => showPreview(dfmPreviewProcessor));
     let showPreviewToSideRegistration = commands.registerCommand("DocFX.showDfmPreviewToSide", uri => showPreview(dfmPreviewProcessor, uri, true));
+    let showDocFXPreviewToSideRegistration = commands.registerCommand("DocFX.showDocFXPreviewToSide", uri => showDocFXPreview(docFXPreviewProcessor, uri, true));
     let showSourceRegistration = commands.registerCommand("DocFX.showSource", showSource);
     let showTokenTreeToSideRegistration = commands.registerCommand("DocFX.showTokenTreeToSide", uri => showTokenTree(tokenTreeProcessor));
 
-    context.subscriptions.push(showPreviewRegistration, showPreviewToSideRegistration, showSourceRegistration, showTokenTreeToSideRegistration);
+    context.subscriptions.push(showPreviewRegistration, showPreviewToSideRegistration, showDocFXPreviewToSideRegistration, showSourceRegistration, showTokenTreeToSideRegistration);
     context.subscriptions.push(previewProviderRegistration, tokenTreeProviderRegistration);
 
     workspace.onDidSaveTextDocument(document => {
@@ -33,6 +36,9 @@ export function activate(context: ExtensionContext) {
             switch (PreviewProcessor.previewType) {
                 case PreviewType.dfmPreview:
                     dfmPreviewProcessor.updateContent(uri);
+                    break;
+                case PreviewType.docfxPreview:
+                    docFXPreviewProcessor.updateContent(uri);
                     break;
                 case PreviewType.tokenTreePreview:
                     // TODO: make token tree change synchronous
@@ -48,6 +54,9 @@ export function activate(context: ExtensionContext) {
                 case PreviewType.dfmPreview:
                     dfmPreviewProcessor.updateContent(uri);
                     break;
+                case PreviewType.docfxPreview:
+                    docFXPreviewProcessor.updateContent(uri);
+                    break;
                 case PreviewType.tokenTreePreview:
                     // TODO: make token tree change synchronous
                     break;
@@ -57,9 +66,9 @@ export function activate(context: ExtensionContext) {
 
     workspace.onDidChangeConfiguration(() => {
         workspace.textDocuments.forEach(document => {
-            if (document.uri.scheme === ConstVariable.markdownScheme) {
+            if (document.uri.scheme === ConstVariables.markdownScheme) {
                 dfmPreviewProcessor.updateContent(document.uri);
-            } else if (document.uri.scheme === ConstVariable.tokenTreeScheme) {
+            } else if (document.uri.scheme === ConstVariables.tokenTreeScheme) {
                 tokenTreeProcessor.updateContent(document.uri);
             }
         });
@@ -79,12 +88,12 @@ export function activate(context: ExtensionContext) {
     server.on("request", function (req, res) {
         let requestInfo = req.url.split("/");
         switch (requestInfo[1]) {
-            case ConstVariable.matchFromR2L:
+            case ConstVariables.matchFromR2L:
                 if (!mapToSelection(parseInt(requestInfo[2]), parseInt(requestInfo[3])))
                     window.showErrorMessage("Selection Range Error");
                 res.end();
                 break;
-            case ConstVariable.matchFromL2R:
+            case ConstVariables.matchFromL2R:
                 res.writeHead(200, { "Content-Type": "text/plain" });
                 res.write(startLine + " " + endLine);
                 res.end();
@@ -127,11 +136,11 @@ function isMarkdownFile(document: TextDocument) {
 }
 
 function getMarkdownUri(uri: Uri) {
-    return uri.with({ scheme: ConstVariable.markdownScheme, path: uri.fsPath + ".renderedDfm", query: uri.toString() });
+    return uri.with({ scheme: ConstVariables.markdownScheme, path: uri.fsPath + ".renderedDfm", query: uri.toString() });
 }
 
 function getTokenTreeUri(uri: Uri) {
-    return uri.with({ scheme: ConstVariable.tokenTreeScheme, path: uri.fsPath + ".renderedTokenTree", query: uri.toString() });
+    return uri.with({ scheme: ConstVariables.tokenTreeScheme, path: uri.fsPath + ".renderedTokenTree", query: uri.toString() });
 }
 
 function getViewColumn(sideBySide: boolean): ViewColumn {
@@ -160,14 +169,9 @@ function showSource() {
 
 function showPreview(dfmPreviewProcessor: DfmPreviewProcessor, uri?: Uri, sideBySide: boolean = false) {
     dfmPreviewProcessor.initialized = false;
-    let resource = uri;
-    if (!(resource instanceof Uri)) {
-        if (window.activeTextEditor) {
-            resource = window.activeTextEditor.document.uri;
-        } else {
-            // This is most likely toggling the preview
-            return commands.executeCommand("DocFX.showSource");
-        }
+    let resource = this.checkUri(uri)
+    if (!resource) {
+        return commands.executeCommand("DocFX.showSource");
     }
 
     PreviewProcessor.previewType = PreviewType.dfmPreview;
@@ -181,16 +185,26 @@ function showPreview(dfmPreviewProcessor: DfmPreviewProcessor, uri?: Uri, sideBy
     return thenable;
 }
 
+function showDocFXPreview(docFXPreviewProcessor: DocFXPreviewProcessor, uri?: Uri, sideBySide: boolean = false) {
+    PreviewProcessor.previewType = PreviewType.docfxPreview;
+    let resource = this.checkUri(uri)
+    if (!resource) {
+        return commands.executeCommand("DocFX.showSource");
+    }
+
+    docFXPreviewProcessor.startPreview(uri, function (tempPreviewFilePath) {
+        let thenable = commands.executeCommand("vscode.previewHtml",
+            tempPreviewFilePath,
+            getViewColumn(sideBySide),
+            `DocFXPreview "${path.basename(resource.fsPath)}"`);
+    });
+}
+
 function showTokenTree(tokenTreeProcessor: TokenTreeProcessor, uri?: Uri) {
-    let resource = uri;
     tokenTreeProcessor.initialized = false;
-    if (!(resource instanceof Uri)) {
-        if (window.activeTextEditor) {
-            resource = window.activeTextEditor.document.uri;
-        } else {
-            // This is most likely toggling the preview
-            return commands.executeCommand("DocFX.showSource");
-        }
+    let resource = this.checkUri(uri)
+    if (!resource) {
+        return commands.executeCommand("DocFX.showSource");
     }
 
     PreviewProcessor.previewType = PreviewType.tokenTreePreview;
@@ -202,4 +216,17 @@ function showTokenTree(tokenTreeProcessor: TokenTreeProcessor, uri?: Uri) {
 
     tokenTreeProcessor.updateContent(getTokenTreeUri(resource));
     return thenable;
+}
+
+function checkUri(uri: Uri): Uri {
+    let resource = uri;
+    if (!(resource instanceof Uri)) {
+        if (window.activeTextEditor) {
+            resource = window.activeTextEditor.document.uri;
+        } else {
+            // This is most likely toggling the preview
+            return null;
+        }
+    }
+    return resource;
 }

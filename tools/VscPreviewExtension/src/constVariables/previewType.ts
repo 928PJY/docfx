@@ -2,5 +2,6 @@
 
 export const PreviewType = {
     dfmPreview: 0,
-    tokenTreePreview: 1
+    tokenTreePreview: 1,
+    docfxPreview: 2
 }

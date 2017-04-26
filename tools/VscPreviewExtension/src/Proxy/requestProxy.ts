@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ExtensionContext, Uri, window, workspace } from "vscode";
+import { ExtensionContext, window } from "vscode";
 import * as childProcess from "child_process";
 
-import * as ConstVariable from "../constVariables/commonVariables";
+import * as ConstVariables from "../ConstVariables/commonVariables";
 import { Common } from "../common";
 import { DfmService } from "../dfmService";
-import { PreviewType } from "../constVariables/previewType";
+import { PreviewType } from "../ConstVariables/previewType";
 import { ProxyRequest } from "./proxyRequest";
 import { ProxyResponse } from "./proxyResponse";
 import { RequestArray } from "./RequestArray";
@@ -23,8 +23,8 @@ export class requestProxy {
         return requestProxy._instance;
     }
 
-    public newRequest(documentUri: Uri, previewType: number, context:ExtensionContext, callback) {
-        let request = this.prepareRequestData(documentUri, previewType, context, callback);
+    public newRequest(request: ProxyRequest) {
+        request.storageChildProcessPid(this._spawn ? this._spawn.pid : 0);
         this._requestArray.push(request);
         this.requestProcess();
     }
@@ -35,29 +35,6 @@ export class requestProxy {
         } catch (err) {
             window.showErrorMessage(`[Server Error]: ${err}`);
         }
-    }
-
-    private prepareRequestData(documentUri: Uri, previewType: number, context, callback): ProxyRequest {
-        let editor = window.activeTextEditor;
-        if (!editor) {
-            window.showErrorMessage(`[Extension Error]: No ActiveEditor`);
-            return;
-        }
-        let doc = editor.document;
-        let docContent = doc.getText();
-        let fileName = doc.fileName;
-        let rootPath = workspace.rootPath;
-        let relativePath;
-        if (!rootPath || !fileName.includes(rootPath)) {
-            let indexOfFileName = fileName.lastIndexOf("\\");
-            rootPath = fileName.substr(0, indexOfFileName);
-            relativePath = fileName.substring(indexOfFileName + 1);
-        } else {
-            let rootPathLength = rootPath.length;
-            relativePath = fileName.substr(rootPathLength + 1, fileName.length - rootPathLength);
-        }
-
-        return new ProxyRequest(documentUri, previewType, this._spawn ? this._spawn.pid : 0, docContent, relativePath, rootPath, context, callback);
     }
 
     private requestProcess() {
@@ -77,7 +54,8 @@ export class requestProxy {
             let res;
             switch (request.previewType) {
                 case PreviewType.dfmPreview:
-                    res = await DfmService.previewAsync(this._serverPort, request.content, request.workspacePath, request.relativePath);
+                case PreviewType.docfxPreview:
+                    res = await DfmService.previewAsync(this._serverPort, request.content, request.workspacePath, request.relativePath, request.shouldSeparateMarkupResult);
                     break;
                 case PreviewType.tokenTreePreview:
                     res = await DfmService.getTokenTreeAsync(this._serverPort, request.content, request.workspacePath, request.relativePath);
@@ -85,7 +63,7 @@ export class requestProxy {
             }
             request.callback(null, new ProxyResponse(res ? res.data : "", request.relativePath, request.documentUri));
         } catch (err) {
-            if (err.message == ConstVariable.noServiceErrorMessage) {
+            if (err.message == ConstVariables.noServiceErrorMessage) {
                 this._requestArray.push(request);
                 let currentPid = this._spawn ? this._spawn.pid : 0;
                 if (currentPid === request.oldPid) {

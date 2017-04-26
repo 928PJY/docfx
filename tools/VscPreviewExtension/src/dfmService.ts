@@ -3,15 +3,15 @@
 import { AxiosError } from 'axios';
 
 import { DfmHttpClient } from './dfmHttpClient';
-import { Command } from './constVariables/command';
+import { Command } from './ConstVariables/command';
 
 export class DfmService {
-    static async previewAsync(docfxServicePort, content, workspacePath, relativePath, shouldSeparateMarkupResult = false, tempPreviewFilePath = null, pageRefreshJsFilePath = null, originalHtmlPath = null) {
+    static async previewAsync(docfxServicePort, content, workspacePath, relativePath, shouldSeparateMarkupResult) {
         if (!content) {
             return null;
         }
 
-        return await DfmHttpClient.sendPostRequestAsync(docfxServicePort, Command.previewCommand, content, workspacePath, relativePath, shouldSeparateMarkupResult, tempPreviewFilePath, pageRefreshJsFilePath, originalHtmlPath);
+        return await DfmHttpClient.sendPostRequestAsync(docfxServicePort, Command.previewCommand, content, workspacePath, relativePath, shouldSeparateMarkupResult);
     }
 
     static async getTokenTreeAsync(docfxServicePort, content, workspacePath, relativePath) {

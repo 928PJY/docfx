@@ -2,21 +2,18 @@
 
 import { default as Axios, AxiosResponse } from 'axios';
 
-import * as ConstVariable from "./constVariables/commonVariables";
+import * as ConstVariables from "./ConstVariables/commonVariables";
 
 export class DfmHttpClient {
     private static urlPrefix = "http://localhost:";
 
-    static async sendPostRequestAsync(port: string, command: string, content = null, workspacePath = null, relativePath = null, shouldSeparateMarkupResult = false, tempPreviewFilePath = null, pageRefreshJsFilePath = null, originalHtmlPath = null): Promise<AxiosResponse> {
+    static async sendPostRequestAsync(port: string, command: string, content = null, workspacePath = null, relativePath = null, shouldSeparateMarkupResult = false): Promise<AxiosResponse> {
         let promise = Axios.post(this.urlPrefix + port, {
             name: command,
             markdownContent: content,
-            tempPreviewFilePath: tempPreviewFilePath,
             workspacePath: workspacePath,
             relativePath: relativePath,
-            shouldSeparateMarkupResult: shouldSeparateMarkupResult,
-            originalHtmlPath: originalHtmlPath,
-            pageRefreshJsFilePath: pageRefreshJsFilePath
+            shouldSeparateMarkupResult: shouldSeparateMarkupResult
         });
 
         let response: AxiosResponse;
@@ -25,7 +22,7 @@ export class DfmHttpClient {
         } catch (err) {
             let record = err.response;
             if (!record) {
-                throw new Error(ConstVariable.noServiceErrorMessage);
+                throw new Error(ConstVariables.noServiceErrorMessage);
             }
 
             switch (record.status) {

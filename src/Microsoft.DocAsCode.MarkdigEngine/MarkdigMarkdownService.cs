@@ -29,6 +29,11 @@ namespace Microsoft.DocAsCode.MarkdigEngine
 
         public MarkupResult Markup(string content, string filePath)
         {
+            return Markup(content, filePath, false);
+        }
+
+        public MarkupResult Markup(string content, string filePath, bool isEnabledValidaton)
+        {
             if (content == null)
             {
                 throw new ArgumentNullException(nameof(content));
@@ -46,7 +51,7 @@ namespace Microsoft.DocAsCode.MarkdigEngine
 
             return new MarkupResult
             {
-                Html = engine.Markup(context, _parameters),
+                Html = engine.Markup(context, _parameters, isEnabledValidaton),
                 Dependency = dependency.ToImmutableArray()
             };
         }

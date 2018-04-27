@@ -25,6 +25,11 @@ namespace Microsoft.DocAsCode.MarkdigEngine
 
         public string Markup(MarkdownContext context, MarkdownServiceParameters parameters)
         {
+            return Markup(context, parameters, false);
+        }
+
+        public string Markup(MarkdownContext context, MarkdownServiceParameters parameters, bool isEnabledValidation)
+        {
             if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
@@ -35,7 +40,7 @@ namespace Microsoft.DocAsCode.MarkdigEngine
                 throw new ArgumentNullException(nameof(parameters));
             }
 
-            var pipeline = CreatePipeline(context, parameters);
+            var pipeline = CreatePipeline(context, parameters, isEnabledValidation);
 
             return Markdown.ToHtml(context.Content, pipeline);
         }
@@ -88,7 +93,7 @@ namespace Microsoft.DocAsCode.MarkdigEngine
             _dependency.Add(file);
         }
 
-        private MarkdownPipeline CreatePipeline(MarkdownContext context, MarkdownServiceParameters parameters)
+        private MarkdownPipeline CreatePipeline(MarkdownContext context, MarkdownServiceParameters parameters, bool isEnabledValidation = false)
         {
             if (context == null)
             {
@@ -102,7 +107,7 @@ namespace Microsoft.DocAsCode.MarkdigEngine
 
             var builder = new MarkdownPipelineBuilder()
                                 .UseMarkdigAdvancedExtensions()
-                                .UseDfmExtensions(this, context, parameters)
+                                .UseDfmExtensions(this, context, parameters, isEnabledValidation)
                                 .RemoveUnusedExtensions();
 
             return builder.Build();

@@ -32,7 +32,8 @@ namespace Microsoft.DocAsCode.MarkdigEngine
             this MarkdownPipelineBuilder pipeline,
             MarkdownEngine engine,
             MarkdownContext context,
-            MarkdownServiceParameters parameters)
+            MarkdownServiceParameters parameters,
+            bool isEnabledValidation)
         {
             return pipeline
                 .UseHeadingIdRewriter()
@@ -46,7 +47,7 @@ namespace Microsoft.DocAsCode.MarkdigEngine
                 .UseTabGroup()
                 .UseLineNumber(context, parameters)
                 .UseMonikerRange()
-                .UseValidators(context, parameters)
+                .UseValidators(context, parameters, isEnabledValidation)
                 .UseInteractiveCode()
                 .UseRow()
                 .UseNestedColumn()
@@ -61,8 +62,13 @@ namespace Microsoft.DocAsCode.MarkdigEngine
             return pipeline;
         }
 
-        public static MarkdownPipelineBuilder UseValidators(this MarkdownPipelineBuilder pipeline, MarkdownContext context, MarkdownServiceParameters parameters)
+        public static MarkdownPipelineBuilder UseValidators(this MarkdownPipelineBuilder pipeline, MarkdownContext context, MarkdownServiceParameters parameters, bool isEnabledValidation = false)
         {
+            if (!isEnabledValidation)
+            {
+                return pipeline;
+            }
+
             var tokenRewriter = context.Mvb.CreateRewriter();
             var visitor = new MarkdownDocumentVisitor(tokenRewriter);
 

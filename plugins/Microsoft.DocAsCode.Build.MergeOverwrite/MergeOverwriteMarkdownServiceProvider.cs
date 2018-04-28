@@ -64,6 +64,11 @@ namespace Microsoft.DocAsCode.Build.MergeOverwrite
 
             public MarkupResult Markup(string src, string path)
             {
+                return Markup(src, path, false);
+            }
+
+            public MarkupResult Markup(string src, string path, bool isEnabledzValidation)
+            {
                 var dependency = new HashSet<string>();
                 var html = _builder.CreateDfmEngine(_renderer).Markup(src, path, dependency);
                 var result = new MarkupResult
@@ -75,11 +80,6 @@ namespace Microsoft.DocAsCode.Build.MergeOverwrite
                     result.Dependency = dependency.ToImmutableArray();
                 }
                 return result;
-            }
-
-            public MarkupResult Markup(string src, string path, bool isEnabledzValidation)
-            {
-                throw new NotImplementedException();
             }
         }
 

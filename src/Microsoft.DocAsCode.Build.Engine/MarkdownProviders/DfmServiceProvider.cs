@@ -158,6 +158,11 @@ namespace Microsoft.DocAsCode.Build.Engine
 
             public MarkupResult Markup(string src, string path)
             {
+                return Markup(src, path, false);
+            }
+
+            public MarkupResult Markup(string src, string path, bool isEnabledValidation)
+            {
                 var dependency = new HashSet<string>();
                 var html = Builder.CreateDfmEngine(Renderer).Markup(src, path, dependency);
                 var result = new MarkupResult
@@ -169,11 +174,6 @@ namespace Microsoft.DocAsCode.Build.Engine
                     result.Dependency = dependency.ToImmutableArray();
                 }
                 return result;
-            }
-
-            public MarkupResult Markup(string src, string path, bool isEnabledValidation)
-            {
-                throw new NotImplementedException();
             }
 
             public string GetIncrementalContextHash() => _incrementalContextHash;

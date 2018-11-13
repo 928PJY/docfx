@@ -18,7 +18,7 @@ namespace Microsoft.Docs.Build
 
         public List<string> Parse(string rangeString)
         {
-            List<string> monikerNames = null;
+            List<string> monikerNames = new List<string>();
             try
             {
                 var expression = ExpressionCreator.Create(rangeString);
@@ -31,6 +31,29 @@ namespace Microsoft.Docs.Build
             }
 
             return monikerNames;
+        }
+
+        public List<string> Parse(string rangeString, List<string> fileLevelMonikers, List<Error> errors)
+        {
+            var monikers = new List<string>();
+
+            // Moniker range not defined in docfx.yml/docfx.json,
+            // User should not define it in moniker zone
+            if (fileLevelMonikers.Count == 0)
+            {
+                errors.Add(Errors.MonikerConfigMissing());
+                return new List<string>();
+            }
+
+            var zoneLevelMonikers = Parse(rangeString);
+            monikers = fileLevelMonikers.Intersect(zoneLevelMonikers).ToList();
+
+            if(monikers.Count == 0)
+            {
+                errors.Add(Error);
+            }
+
+            return monikers;
         }
     }
 }

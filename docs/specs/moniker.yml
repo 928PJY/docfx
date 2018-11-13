@@ -41,6 +41,34 @@ outputs:
       "monikers": []
     }
 ---
+# Moniker Zone syntax
+inputs:
+  docfx.yml: |
+    monikerRange:
+      'docs/v1/**/*.md': '>= netcore-1.0 < netcore-2.0'
+    routes:
+      docs/v1/: docs/
+    monikerDefinitionUrl: monikerDefinition.json
+  docs/v1/a.md: |
+    Moniker: netcore-1.0, netcore-1.1, netcore-1.2
+    ::: moniker range="<= netcore-1.1"
+    Moniker: netcore-1.0, netcore-1.1
+    ::: moniker-end
+  monikerDefinition.json: |
+    {
+      "monikers": [
+        { "name": "netcore-1.0", "product": ".NET Core" },
+        { "name": "netcore-1.1", "product": ".NET Core" },
+        { "name": "netcore-1.2", "product": ".NET Core" },
+      ]
+    }
+outputs:
+  9d4e15fd/docs/a.json: |
+    {
+      "content": "<p>Moniker: netcore-1.0, netcore-1.1</p>",
+      "monikers": ["netcore-1.0", "netcore-1.1"]
+    }
+---
 # Two or more documents which don't have moniker or the moniker range is not mutually exclusive from others, publish to the same url
 inputs:
   docfx.yml: |

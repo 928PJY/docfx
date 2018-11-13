@@ -100,6 +100,7 @@ namespace Microsoft.Docs.Build
             var (html, markup) = Markup.ToHtml(
                 content,
                 file,
+                (monikerRange) => 
                 (path, relativeTo) => Resolve.ReadFile(path, relativeTo, errors, callback.DependencyMapBuilder),
                 (path, relativeTo, resultRelativeTo) => Resolve.GetLink(path, relativeTo, resultRelativeTo, errors, callback.BuildChild, callback.DependencyMapBuilder, callback.BookmarkValidator),
                 (uid) => Resolve.ResolveXref(uid, callback.XrefMap),

@@ -32,5 +32,22 @@ namespace Microsoft.Docs.Build
 
             return monikerNames;
         }
+
+        public List<string> Parse(string rangeString, List<string> fileLevelMonikers)
+        {
+            List<string> monikerNames = null;
+            try
+            {
+                var expression = ExpressionCreator.Create(rangeString);
+                monikerNames = expression.Accept(_monikersEvaluator).ToList();
+                monikerNames.Sort();
+            }
+            catch (MonikerRangeException ex)
+            {
+                throw Errors.InvalidMonikerRange(rangeString, ex.Message).ToException();
+            }
+
+            return monikerNames;
+        }
     }
 }

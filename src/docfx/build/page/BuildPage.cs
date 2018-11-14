@@ -93,8 +93,14 @@ namespace Microsoft.Docs.Build
         {
             var errors = new List<Error>();
             var content = file.ReadText();
-            var monikers = file.Docset.MonikersProvider.GetMonikers(file);
             GitUtility.CheckMergeConflictMarker(content, file.FilePath);
+
+            var (metaErrors, metadata) = ExtractYamlHeader.Extract(file, context);
+            errors.AddRange(metaErrors);
+
+            var monikerRange = metadata.Value<string>("monikerRange") ?? null;
+            var (error, monikers) = file.Docset.MonikersProvider.GetMonikers(file, monikerRange);
+            errors.AddIfNotNull(error);
 
             // TODO: handle blank page
             var (html, markup) = Markup.ToHtml(
@@ -103,11 +109,10 @@ namespace Microsoft.Docs.Build
                 (path, relativeTo) => Resolve.ReadFile(path, relativeTo, errors, callback.DependencyMapBuilder),
                 (path, relativeTo, resultRelativeTo) => Resolve.GetLink(path, relativeTo, resultRelativeTo, errors, callback.BuildChild, callback.DependencyMapBuilder, callback.BookmarkValidator),
                 (uid) => Resolve.ResolveXref(uid, callback.XrefMap),
-                (monikerRange) => file.Docset.MonikersProvider.GetMonikers(file, monikerRange, monikers, errors),
+                (rangeString) => file.Docset.MonikersProvider.GetMonikers(file, rangeString, monikers, errors),
                 MarkdownPipelineType.ConceptualMarkdown);
             errors.AddRange(markup.Errors);
-            var (metaErrors, metadata) = ExtractYamlHeader.Extract(file, context);
-            errors.AddRange(metaErrors);
+
             var htmlDom = HtmlUtility.LoadHtml(html);
             var htmlTitleDom = HtmlUtility.LoadHtml(markup.HtmlTitle);
             var title = metadata.Value<string>("title") ?? HtmlUtility.GetInnerText(htmlTitleDom);

@@ -26,7 +26,7 @@ namespace Microsoft.Docs.Build
             var workTreeHeads = new ConcurrentBag<(string href, string head)>();
 
             await ProcessUtility.RunInsideMutex(
-                PathUtility.NormalizeFile(Path.GetRelativePath(AppData.GitRestoreDir, restorePath)),
+                PathUtility.NormalizeFile(Path.GetRelativePath(AppData.GitRoot, restorePath)),
                 async () =>
                 {
                     try
@@ -44,11 +44,11 @@ namespace Microsoft.Docs.Build
 
             async Task AddWorkTrees()
             {
-                var existingWorkTrees = new ConcurrentDictionary<string, int>((await GitUtility.ListWorkTrees(restorePath, false)).ToDictionary(k => k, v => 0));
+                var existingWorkTrees = new ConcurrentDictionary<string, int>((await GitUtility.ListWorkTree(restorePath)).ToDictionary(k => k, v => 0));
                 await ParallelUtility.ForEach(hrefs, async href =>
                 {
                     var (_, rev) = GitUtility.GetGitRemoteInfo(href);
-                    var workTreeHead = $"{GitUtility.RevParse(restorePath, rev)}-{PathUtility.Encode(rev)}";
+                    var workTreeHead = $"{GitUtility.RevParse(restorePath, rev)}-{HrefUtility.EscapeUrlSegment(rev)}";
                     var workTreePath = GetRestoreWorkTreeDir(restoreDir, workTreeHead);
                     if (existingWorkTrees.TryAdd(workTreePath, 0))
                     {

@@ -76,7 +76,7 @@ namespace Microsoft.Docs.Build
 
             if (monikers.Count == 0)
             {
-                errors.Add(Errors.NoMonikersIntersection($"No intersection between zone and file level monikers. The result of zone level range string `{rangeString}` is {string.Join(',', zoneLevelMonikers)}, while file level monikers is {string.Join(',', fileLevelMonikers)}."));
+                errors.Add(Errors.NoMonikersIntersection($"No intersection between zone and file level monikers. The result of zone level range string '{rangeString}' is '{string.Join(',', zoneLevelMonikers)}', while file level monikers is '{string.Join(',', fileLevelMonikers)}'."));
             }
 
             return monikers;

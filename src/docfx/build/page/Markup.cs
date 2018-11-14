@@ -108,6 +108,7 @@ namespace Microsoft.Docs.Build
                 .UseExtractTitle()
                 .UseResolveHtmlLinks(markdownContext)
                 .UseResolveXref(ResolveXref)
+                .UseMonikerZone(ParseMonikerRange)
                 .Build();
         }
 
@@ -120,7 +121,6 @@ namespace Microsoft.Docs.Build
                 .UseDocfxExtensions(markdownContext)
                 .UseResolveHtmlLinks(markdownContext)
                 .UseResolveXref(ResolveXref)
-                .UseMonikerZone(ParseMonikerRange)
                 .Build();
         }
 

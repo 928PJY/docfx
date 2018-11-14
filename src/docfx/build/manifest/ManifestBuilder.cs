@@ -37,7 +37,7 @@ namespace Microsoft.Docs.Build
                 return false;
             }
 
-            if (monikers.Count == 0)
+            if (monikers == null || monikers.Count == 0)
             {
                 monikers = new List<string> { "NONE_VERSION" };
             }
@@ -56,7 +56,7 @@ namespace Microsoft.Docs.Build
                     .SelectMany(file => file.Value)
                     .GroupBy(moniker => moniker)
                     .Where(group => group.Count() > 1);
-                if (conflictMoniker.Count() > 0)
+                if ( conflictMoniker.Count() > 0)
                 {
                     context.Report(Errors.PublishUrlConflict(siteUrl, files.Keys));
 

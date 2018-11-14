@@ -26,7 +26,7 @@ namespace Microsoft.Docs.Build
 
         protected override void Write(HtmlRenderer renderer, MonikerRangeBlock obj)
         {
-            renderer.Write("<div").WriteAttributes(obj).Write($" data-moniker=\"{string.Join("", _parseMonikerRange(obj.MonikerRange))}\"").WriteLine(">");
+            renderer.Write("<div").WriteAttributes(obj).Write($" data-moniker=\"{string.Join(" ", _parseMonikerRange(obj.MonikerRange))}\"").WriteLine(">");
             renderer.WriteChildren(obj);
             renderer.WriteLine("</div>");
         }

@@ -32,9 +32,6 @@ namespace Microsoft.Docs.Build
             model.CanonicalUrl = GetCanonicalUrl(file);
             model.Bilingual = file.Docset.Config.Localization.Bilingual;
 
-            var monikers = file.Docset.MonikersProvider.GetMonikers(file);
-            model.Monikers = monikers;
-
             (model.DocumentId, model.DocumentVersionIndependentId) = file.Docset.Redirections.TryGetDocumentId(file, out var docId) ? docId : file.Id;
             (model.ContentGitUrl, model.OriginalContentGitUrl, model.Gitcommit) = contribution.GetGitUrls(file);
 
@@ -51,7 +48,7 @@ namespace Microsoft.Docs.Build
                     : await RazorTemplate.Render(model.PageType, model);
             }
 
-            return (errors, output, callback.DependencyMapBuilder.Build(), monikers);
+            return (errors, output, callback.DependencyMapBuilder.Build(), model.Monikers);
         }
 
         private static string GetCanonicalUrl(Document file)
@@ -96,14 +93,17 @@ namespace Microsoft.Docs.Build
         {
             var errors = new List<Error>();
             var content = file.ReadText();
+            var monikers = file.Docset.MonikersProvider.GetMonikers(file);
             GitUtility.CheckMergeConflictMarker(content, file.FilePath);
+
+            // TODO: handle blank page
             var (html, markup) = Markup.ToHtml(
                 content,
                 file,
-                (monikerRange) => 
                 (path, relativeTo) => Resolve.ReadFile(path, relativeTo, errors, callback.DependencyMapBuilder),
                 (path, relativeTo, resultRelativeTo) => Resolve.GetLink(path, relativeTo, resultRelativeTo, errors, callback.BuildChild, callback.DependencyMapBuilder, callback.BookmarkValidator),
                 (uid) => Resolve.ResolveXref(uid, callback.XrefMap),
+                (monikerRange) => file.Docset.MonikersProvider.GetMonikers(file, monikerRange, monikers, errors),
                 MarkdownPipelineType.ConceptualMarkdown);
             errors.AddRange(markup.Errors);
             var (metaErrors, metadata) = ExtractYamlHeader.Extract(file, context);
@@ -120,6 +120,7 @@ namespace Microsoft.Docs.Build
                 Title = title,
                 RawTitle = markup.HtmlTitle,
                 WordCount = wordCount,
+                Monikers = monikers,
             };
 
             var bookmarks = HtmlUtility.GetBookmarks(htmlDom).Concat(HtmlUtility.GetBookmarks(htmlTitleDom)).ToHashSet();

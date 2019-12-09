@@ -1,8 +1,13 @@
 Version Notes (Current Version: v2.48)
 =======================================
 
-v2.48(Pre-release)
+v2.48
 -----------
+
+1. Add custom template. Thanks @code-beans!
+2. Bug fix:
+    1. Fix regions not found issue in xml based files. (#5319)
+    2. 
 
 v2.47
 -----------

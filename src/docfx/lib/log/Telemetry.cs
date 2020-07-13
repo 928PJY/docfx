@@ -84,9 +84,9 @@ namespace Microsoft.Docs.Build
             var hashCode = HashUtility.GetMd5Hash(docfxConfigTelemetryValue);
             if (docfxConfigTelemetryValue.Length > MaxEventPropertyLength)
             {
-                var newValue = JsonUtility.DeepClone(docfxConfig) as JObject;
-                TryRemoveNestedObject(newValue!);
-                docfxConfigTelemetryValue = JsonUtility.Serialize(newValue!);
+                var newValue = (JObject)JsonUtility.DeepClone(docfxConfig);
+                TryRemoveNestedObject(newValue);
+                docfxConfigTelemetryValue = JsonUtility.Serialize(newValue);
             }
 
             var properties = new Dictionary<string, string>();

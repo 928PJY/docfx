@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Web;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Docs.Build
@@ -80,6 +81,7 @@ namespace Microsoft.Docs.Build
                 {
                     "restore" => Restore.Run(workingDirectory, options),
                     "build" => Build.Run(workingDirectory, options),
+                    "serve" => Serve.Run(workingDirectory, options),
                     _ => false,
                 } ? 1 : 0;
             }
@@ -115,6 +117,12 @@ namespace Microsoft.Docs.Build
                     syntax.DefineOption("dry-run", ref options.DryRun, "Do not produce build artifact and only produce validation result.");
                     syntax.DefineOption("no-restore", ref options.NoRestore, "Do not restore dependencies before build.");
                     syntax.DefineOption("no-cache", ref options.NoCache, "Do not use cache dependencies in build, always fetch latest dependencies.");
+                    DefineCommonOptions(syntax, ref workingDirectory, options);
+
+                    // Serve command
+                    syntax.DefineCommand("serve", ref command, "Serve a docset.");
+                    syntax.DefineOption("docset-name", ref options.DocsetName, "Name of the docset need to serve");
+                    syntax.DefineOption("no-restore", ref options.NoRestore, "Do not restore dependencies before build.");
                     DefineCommonOptions(syntax, ref workingDirectory, options);
                 });
 

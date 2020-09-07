@@ -123,6 +123,7 @@ namespace Microsoft.Docs.Build
                     syntax.DefineCommand("serve", ref command, "Serve a docset.");
                     syntax.DefineOption("docset-name", ref options.DocsetName, "Name of the docset need to serve");
                     syntax.DefineOption("no-restore", ref options.NoRestore, "Do not restore dependencies before build.");
+                    syntax.DefineOption("http", ref options.Http, "Do not restore dependencies before build.");
                     DefineCommonOptions(syntax, ref workingDirectory, options);
                 });
 

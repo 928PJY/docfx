@@ -18,6 +18,8 @@ namespace Microsoft.Docs.Build
         private readonly ErrorSink _errorSink = new ErrorSink();
         private readonly ConcurrentDictionary<FilePath, ErrorSink> _fileSink = new ConcurrentDictionary<FilePath, ErrorSink>();
 
+        private readonly MemoryCache<FilePath, List<Error>> _fileErrors = new MemoryCache<FilePath, List<Error>>();
+
         public override bool HasError => _errors.HasError;
 
         public override bool FileHasError(FilePath file) => _fileSink.TryGetValue(file, out var sink) && sink.ErrorCount > 0;
@@ -28,6 +30,17 @@ namespace Microsoft.Docs.Build
             _config = config;
             _sourceMap = sourceMap;
             _customRules = MergeCustomRules(config, contentValidationRules);
+        }
+
+        public override List<Error> GetErrorsOnFile(FilePath file)
+        {
+            return _fileErrors.GetOrAdd(file, (file) => new List<Error>());
+        }
+
+        public override void ClearErrorsOnFile(FilePath file)
+        {
+            var errors = _fileErrors.GetOrAdd(file, (file) => new List<Error>());
+            errors.Clear();
         }
 
         public override void Add(Error error)
@@ -80,6 +93,12 @@ namespace Microsoft.Docs.Build
                     };
                     _errors.Add(Errors.Logging.ExceedMaxFileErrors(maxAllowed, error.Level, error.Source.File));
                     break;
+            }
+
+            if (error.Source?.File != null)
+            {
+                var errorsOnCurrentFile = _fileErrors.GetOrAdd(error.Source?.File, (file) => new List<Error>());
+                errorsOnCurrentFile.Add(error);
             }
         }
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 
 namespace Microsoft.Docs.Build
 {
@@ -73,7 +74,12 @@ namespace Microsoft.Docs.Build
         public JsonSchemaTransformer JsonSchemaTransformer { get; }
 
         public Context(
-            ErrorBuilder errorLog, Config config, BuildOptions buildOptions, PackageResolver packageResolver, FileResolver fileResolver, SourceMap sourceMap)
+            ErrorBuilder errorLog,
+            Config config,
+            BuildOptions buildOptions,
+            PackageResolver packageResolver,
+            FileResolver fileResolver,
+            SourceMap sourceMap)
         {
             DependencyMapBuilder = new DependencyMapBuilder(sourceMap);
 

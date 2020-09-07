@@ -16,6 +16,10 @@ namespace Microsoft.Docs.Build
 
         public abstract bool FileHasError(FilePath file);
 
+        public abstract List<Error> GetErrorsOnFile(FilePath file);
+
+        public abstract void ClearErrorsOnFile(FilePath file);
+
         public void AddIfNotNull(Error? error)
         {
             if (error != null)
@@ -48,6 +52,10 @@ namespace Microsoft.Docs.Build
             public override void Add(Error error) { }
 
             public override bool FileHasError(FilePath file) => throw new NotSupportedException();
+
+            public override List<Error> GetErrorsOnFile(FilePath file) => throw new NotSupportedException();
+
+            public override void ClearErrorsOnFile(FilePath file) => throw new NotSupportedException();
         }
     }
 }

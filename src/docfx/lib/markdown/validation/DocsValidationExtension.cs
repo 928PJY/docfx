@@ -49,15 +49,15 @@ namespace Microsoft.Docs.Build
                     return false;
                 });
 
-                contentValidator.ValidateHeadings(currentFile, documentNodes, false);
+                // contentValidator.ValidateHeadings(currentFile, documentNodes, false);
                 foreach (var (inclusion, inclusionNodes) in inclusionDocumentNodes)
                 {
-                    contentValidator.ValidateHeadings(inclusion, inclusionNodes, true);
+                    // contentValidator.ValidateHeadings(inclusion, inclusionNodes, true);
                 }
 
                 foreach (var codeBlock in codeBlockItemList)
                 {
-                    contentValidator.ValidateCodeBlock(currentFile, codeBlock.codeBlockItem, codeBlock.IsIncluded);
+                    // contentValidator.ValidateCodeBlock(currentFile, codeBlock.codeBlockItem, codeBlock.IsIncluded);
                 }
             });
         }

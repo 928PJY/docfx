@@ -202,7 +202,7 @@ namespace Microsoft.Docs.Build
             var content = context.Input.ReadString(file.FilePath);
             errors.AddIfNotNull(MergeConflict.CheckMergeConflictMarker(content, file.FilePath));
 
-            context.ContentValidator.ValidateSensitiveLanguage(content, file);
+            // context.ContentValidator.ValidateSensitiveLanguage(content, file);
 
             var userMetadata = context.MetadataProvider.GetMetadata(errors, file.FilePath);
 
@@ -211,7 +211,7 @@ namespace Microsoft.Docs.Build
             var conceptual = new ConceptualModel { Title = userMetadata.Title };
             var html = context.MarkdownEngine.ToHtml(errors, content, file, MarkdownPipelineType.Markdown, conceptual);
 
-            context.ContentValidator.ValidateTitle(file, conceptual.Title, userMetadata.TitleSuffix);
+            // context.ContentValidator.ValidateTitle(file, conceptual.Title, userMetadata.TitleSuffix);
             ProcessConceptualHtml(conceptual, context, file, html);
 
             return context.Config.DryRun ? new JObject() : JsonUtility.ToJObject(conceptual);

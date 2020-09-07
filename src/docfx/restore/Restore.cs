@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using OmniSharp.Extensions.LanguageServer.Protocol.Server.WorkDone;
+using OmniSharp.Extensions.LanguageServer.Server;
 
 namespace Microsoft.Docs.Build
 {
@@ -35,7 +37,12 @@ namespace Microsoft.Docs.Build
         }
 
         public static bool RestoreDocset(
-            ErrorBuilder errors, string workingDirectory, string docsetPath, string? outputPath, CommandLineOptions options, FetchOptions fetchOptions)
+            ErrorBuilder errors,
+            string workingDirectory,
+            string docsetPath,
+            string? outputPath,
+            CommandLineOptions options,
+            FetchOptions fetchOptions)
         {
             using var disposables = new DisposableCollector();
             errors = new DocsetErrorWriter(errors, workingDirectory, docsetPath);

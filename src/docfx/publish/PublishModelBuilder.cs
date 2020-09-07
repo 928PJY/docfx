@@ -73,7 +73,7 @@ namespace Microsoft.Docs.Build
                 if (!publishItem.HasError)
                 {
                     Telemetry.TrackBuildFileTypeCount(filePath, publishItem);
-                    _contentValidator.ValidateManifest(filePath, publishItem);
+                    // _contentValidator.ValidateManifest(filePath, publishItem);
                 }
             }
 

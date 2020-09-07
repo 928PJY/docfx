@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
@@ -22,6 +23,16 @@ namespace Microsoft.Docs.Build
         {
             _errors = errors;
             _docsetBasePath = new PathString(Path.GetRelativePath(workingDirectory, docsetPath));
+        }
+
+        public override List<Error> GetErrorsOnFile(FilePath file)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void ClearErrorsOnFile(FilePath file)
+        {
+            throw new NotSupportedException();
         }
 
         public override void Add(Error error)

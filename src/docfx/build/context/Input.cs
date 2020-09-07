@@ -9,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Enumeration;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Docs.Build
@@ -29,6 +30,8 @@ namespace Microsoft.Docs.Build
         private readonly MemoryCache<PathString, byte[]?> _gitBlobCache = new MemoryCache<PathString, byte[]?>();
         private readonly ConcurrentDictionary<FilePath, JToken> _generatedContents = new ConcurrentDictionary<FilePath, JToken>();
         private readonly PathString? _alternativeFallbackFolder;
+
+        private readonly MemoryCache<FilePath, string> _inMemoryContent = new MemoryCache<FilePath, string>();
 
         public Input(BuildOptions buildOptions, Config config, PackageResolver packageResolver, RepositoryProvider repositoryProvider)
         {
@@ -110,6 +113,13 @@ namespace Microsoft.Docs.Build
             return false;
         }
 
+        public void RegisterInMemoryCache(FilePath path, string content)
+        {
+            _inMemoryContent.AddOrUpdate(path, content, (_, oldValue) => content);
+            _jsonTokenCache.Remove(path, out _);
+            _yamlTokenCache.Remove(path, out _);
+        }
+
         /// <summary>
         /// Reads the specified file as a string.
         /// </summary>
@@ -150,7 +160,15 @@ namespace Microsoft.Docs.Build
         /// </summary>
         public TextReader ReadText(FilePath file)
         {
-            return new StreamReader(ReadStream(file));
+            if (_inMemoryContent.TryGetValue(file, out var content))
+            {
+                byte[] byteArray = Encoding.ASCII.GetBytes(content);
+                return new StreamReader(new MemoryStream(byteArray));
+            }
+            else
+            {
+                return new StreamReader(ReadStream(file));
+            }
         }
 
         public Stream ReadStream(FilePath file)

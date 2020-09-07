@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
@@ -30,6 +31,16 @@ namespace Microsoft.Docs.Build
         public ErrorWriter(string? outputPath = null)
         {
             _output = new Lazy<TextWriter>(() => outputPath is null ? TextWriter.Null : CreateOutput(outputPath));
+        }
+
+        public override List<Error> GetErrorsOnFile(FilePath file)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void ClearErrorsOnFile(FilePath file)
+        {
+            throw new NotSupportedException();
         }
 
         public override void Add(Error error)
@@ -79,7 +90,7 @@ namespace Microsoft.Docs.Build
             {
                 if (_output.IsValueCreated)
                 {
-                    _output.Value.Dispose();
+                    // _output.Value.Dispose();
                 }
             }
         }

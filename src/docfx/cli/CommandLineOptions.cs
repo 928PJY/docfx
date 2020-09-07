@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 namespace Microsoft.Docs.Build
 {
     [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1401:FieldsMustBePrivate", Justification = "<Skipping>")]
-    internal class CommandLineOptions
+    public class CommandLineOptions
     {
         public string? Output;
         public string? Log;
@@ -17,6 +17,7 @@ namespace Microsoft.Docs.Build
         public bool Stdin;
         public bool NoCache;
         public bool NoRestore;
+        public string? Http;
         public string? Template;
         public string? DocsetName;
 
@@ -45,6 +46,11 @@ namespace Microsoft.Docs.Build
             if (Template != null)
             {
                 config["template"] = Template;
+            }
+
+            if (Http != null)
+            {
+                config["http"] = JsonUtility.DeserializeData<JObject>(Http, null);
             }
 
             return config;

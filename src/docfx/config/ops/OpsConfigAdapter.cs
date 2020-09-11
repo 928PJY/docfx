@@ -27,6 +27,9 @@ namespace Microsoft.Docs.Build
         private readonly (string, Func<Uri, Task<string>>)[] _apis;
         private readonly OpsAccessor _opsAccessor;
 
+        private static Lazy<Task<string>>? getDocsetInfo;
+        private static readonly object s_lock = new object();
+
         public OpsConfigAdapter(OpsAccessor opsAccessor)
         {
             _opsAccessor = opsAccessor;
@@ -66,7 +69,14 @@ namespace Microsoft.Docs.Build
             var xrefEndpoint = queries["xref_endpoint"];
             var xrefQueryTags = string.IsNullOrEmpty(queries["xref_query_tags"]) ? new List<string>() : queries["xref_query_tags"].Split(',').ToList();
 
-            var docsetInfo = await _opsAccessor.GetDocsetInfo(repository);
+            if (getDocsetInfo == null)
+            {
+                lock (s_lock)
+                {
+                    getDocsetInfo = new Lazy<Task<string>>(() => _opsAccessor.GetDocsetInfo(repository));
+                }
+            }
+            var docsetInfo = await getDocsetInfo.Value;
             var docsets = JsonConvert.DeserializeAnonymousType(
                 docsetInfo,
                 new[] { new { name = "", base_path = default(BasePath), site_name = "", product_name = "", use_template = false } });

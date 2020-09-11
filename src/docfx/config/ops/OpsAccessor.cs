@@ -243,7 +243,6 @@ namespace Microsoft.Docs.Build
                     };
 
                     request.Headers.Add("X-OP-BuildUserToken", await token.Value);
-                    Console.WriteLine($"Fetch url `{url}` with headers 'X-OP-BuildUserToken': {(await token.Value).Substring(0, 7)}");
                 }
                 catch (Exception ex)
                 {

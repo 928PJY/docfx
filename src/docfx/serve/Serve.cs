@@ -38,8 +38,6 @@ namespace Microsoft.Docs.Build
 
             Serilog.Log.Logger.Information("This only goes file...");
 
-            IObserver<WorkDoneProgressReport> workDone = null;
-
             var server = await LanguageServer.From(options =>
                 options
                     .WithInput(Console.OpenStandardInput())
@@ -49,6 +47,7 @@ namespace Microsoft.Docs.Build
                         .AddLanguageProtocolLogging()
                         .SetMinimumLevel(LogLevel.Debug))
                     .WithHandler<TextDocumentHandler>()
+                    .WithHandler<PreviewHandler>()
                     .WithServices(x => x.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace)))
                     .WithServices(services =>
                     {
@@ -89,7 +88,7 @@ namespace Microsoft.Docs.Build
                             Message = "Context preparing done",
                         });
 
-                        Task.Delay(1000).Wait();
+                        Task.Delay(2000).Wait();
 
                         buildContext.Context = context;
                         buildContext.DocsetPath = docset.docsetPath;
@@ -141,7 +140,7 @@ namespace Microsoft.Docs.Build
                     return true;
                 }
 
-                Task.Delay(1000).Wait();
+                Task.Delay(2000).Wait();
                 manager.OnNext(new WorkDoneProgressReport()
                 {
                     Percentage = 80,
@@ -154,7 +153,7 @@ namespace Microsoft.Docs.Build
                 var sourceMap = new SourceMap(errors, new PathString(buildOptions.DocsetPath), config, fileResolver);
                 var validationRules = GetContentValidationRules(config, fileResolver);
 
-                Task.Delay(1000).Wait();
+                Task.Delay(2000).Wait();
                 manager.OnNext(new WorkDoneProgressReport()
                 {
                     Percentage = 90,

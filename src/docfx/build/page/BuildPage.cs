@@ -12,7 +12,7 @@ namespace Microsoft.Docs.Build
 {
     internal static class BuildPage
     {
-        public static void Build(Context context, Document file)
+        public static void Build(Context context, Document file, out string vis)
         {
             Debug.Assert(file.ContentType == ContentType.Page);
 

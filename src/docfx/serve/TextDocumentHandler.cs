@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DotLiquid.Util;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -21,6 +22,7 @@ namespace Microsoft.Docs.Build
         private readonly ILanguageServerConfiguration _configuration;
         private readonly ILanguageServer _languageServer;
         private readonly BuildContext _buildContext;
+        private readonly BuildCore _buildCore;
 
         private readonly DocumentSelector _documentSelector = new DocumentSelector(
             new DocumentFilter()
@@ -43,13 +45,35 @@ namespace Microsoft.Docs.Build
             _buildContext = buildContext;
             _configuration = configuration;
             _languageServer = languageServer;
+
+            _buildCore = new BuildCore(logger, languageServer, configuration, buildContext);
         }
 
         public TextDocumentSyncKind Change { get; } = TextDocumentSyncKind.Full;
 
         public Task<Unit> Handle(DidChangeTextDocumentParams notification, CancellationToken token)
         {
-            ValidateFile(notification);
+            _logger.LogInformation($"Validating document {notification.TextDocument.Uri}");
+            //_logger.LogDebug("Debug");
+            //_logger.LogTrace("Trace");
+
+            var (errors, content) = _buildCore.BuildFile(notification.TextDocument.Uri, notification.ContentChanges.First().Text);
+
+            var diagnostics = _buildCore.ConvertToDiagnostics(errors);
+
+            _languageServer.TextDocument.PublishDiagnostics(
+                new PublishDiagnosticsParams
+                {
+                    Uri = notification.TextDocument.Uri,
+                    Diagnostics = new Container<Diagnostic>(diagnostics),
+                });
+
+            //_languageServer.SendNotification(
+            //    new PublishDiagnosticsParams
+            //    {
+            //        Uri = notification.TextDocument.Uri,
+            //        Diagnostics = new Container<Diagnostic>(diagnostics),
+            //    });
 
             return Unit.Task;
         }
@@ -116,102 +140,6 @@ namespace Microsoft.Docs.Build
         public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri)
         {
             return new TextDocumentAttributes(uri, "csharp");
-        }
-
-        private void ValidateFile(DidChangeTextDocumentParams notification)
-        {
-            _logger.LogInformation($"Validating document {notification.TextDocument.Uri}");
-            //_logger.LogDebug("Debug");
-            //_logger.LogTrace("Trace");
-
-            var docsetRelativePath = Path.GetRelativePath(_buildContext.DocsetPath!, notification.TextDocument.Uri.GetFileSystemPath());
-            var file = FilePath.Content(PathString.DangerousCreate(docsetRelativePath));
-
-            Context.Input.RegisterInMemoryCache(file, notification.ContentChanges.FirstOrDefault().Text);
-            Context.ErrorBuilder.ClearErrorsOnFile(file);
-
-            ValidateFileCore(Context, file);
-            var errors = Context.ErrorBuilder.GetErrorsOnFile(file);
-            _logger.LogInformation($"{errors.Count} diagnotics found");
-
-            var diagnostics = ConvertToDiagnostics(errors);
-
-            _languageServer.TextDocument.PublishDiagnostics(
-                new PublishDiagnosticsParams
-                {
-                    Uri = notification.TextDocument.Uri,
-                    Diagnostics = new Container<Diagnostic>(diagnostics),
-                });
-        }
-
-        private static void ValidateFileCore(Context context, FilePath path)
-        {
-            var file = context.DocumentProvider.GetDocument(path);
-            switch (file.ContentType)
-            {
-                case ContentType.TableOfContents:
-                    BuildTableOfContents.Build(context, file);
-                    break;
-                case ContentType.Resource:
-                    BuildResource.Build(context, file);
-                    break;
-                case ContentType.Page:
-                    BuildPage.Build(context, file);
-                    break;
-                case ContentType.Redirection:
-                    BuildRedirection.Build(context, file);
-                    break;
-            }
-
-            // Parallel.Invoke(
-            //        () => context.BookmarkValidator.Validate(),
-            //        () => context.ContentValidator.PostValidate(),
-            //        () => context.ErrorBuilder.AddRange(context.MetadataValidator.PostValidate()),
-            //        () => context.ContributionProvider.Save(),
-            //        () => context.RepositoryProvider.Save(),
-            //        () => context.ErrorBuilder.AddRange(context.GitHubAccessor.Save()),
-            //        () => context.ErrorBuilder.AddRange(context.MicrosoftGraphAccessor.Save()));
-        }
-
-        private List<Diagnostic> ConvertToDiagnostics(List<Error> errors)
-        {
-            var diagnostics = new List<Diagnostic>();
-
-            // diagnostics.Add(new Diagnostic
-            // {
-            //    Range = new Range(
-            //        new Position(0, 0),
-            //        new Position(0, 0)
-            //        ),
-            //    Code = "test-code",
-            //    Source = "Docfx",
-            //    Severity = DiagnosticSeverity.Error,
-            //    Message = "Test message",
-            // });
-
-            errors.ForEach(error =>
-            {
-                var source = error.Source!;
-                diagnostics.Add(new Diagnostic
-                {
-                    Range = new Range(
-                        new Position(source.Line - 1, source.Column - 1),
-                        new Position(source.EndLine - 1, source.EndColumn - 1)),
-                    Code = error.Code,
-                    Source = "Docfx",
-                    Severity = error.Level switch
-                    {
-                        ErrorLevel.Error => DiagnosticSeverity.Error,
-                        ErrorLevel.Warning => DiagnosticSeverity.Warning,
-                        ErrorLevel.Suggestion => DiagnosticSeverity.Information,
-                        ErrorLevel.Info => DiagnosticSeverity.Hint,
-                        _ => null,
-                    },
-                    Message = error.Message,
-                });
-            });
-
-            return diagnostics;
         }
     }
 }

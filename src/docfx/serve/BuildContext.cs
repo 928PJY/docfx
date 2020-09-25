@@ -5,5 +5,7 @@ namespace Microsoft.Docs.Build
         public Context? Context { get; set; }
 
         public string? DocsetPath { get; set; }
+
+        public bool EnablePreview { get; set; }
     }
 }

@@ -36,30 +36,20 @@ namespace Microsoft.Docs.Build
             Context.Input.RegisterInMemoryCache(file, textContent);
             Context.ErrorBuilder.ClearErrorsOnFile(file);
 
-            ValidateFileCore(Context, file);
+            var content = BuildFileCore(Context, file);
             var errors = Context.ErrorBuilder.GetErrorsOnFile(file);
 
-            return (errors, string.Empty);
+            return (errors, content);
         }
 
-        private static void ValidateFileCore(Context context, FilePath path)
+        private static string BuildFileCore(Context context, FilePath path)
         {
             var file = context.DocumentProvider.GetDocument(path);
-            switch (file.ContentType)
+            return file.ContentType switch
             {
-                case ContentType.TableOfContents:
-                    BuildTableOfContents.Build(context, file);
-                    break;
-                case ContentType.Resource:
-                    BuildResource.Build(context, file);
-                    break;
-                case ContentType.Page:
-                    BuildPage.Build(context, file);
-                    break;
-                case ContentType.Redirection:
-                    BuildRedirection.Build(context, file);
-                    break;
-            }
+                ContentType.Page => BuildPage.Build(context, file),
+                _ => string.Empty,
+            };
 
             // Parallel.Invoke(
             //        () => context.BookmarkValidator.Validate(),
@@ -74,18 +64,6 @@ namespace Microsoft.Docs.Build
         public List<Diagnostic> ConvertToDiagnostics(List<Error> errors)
         {
             var diagnostics = new List<Diagnostic>();
-
-            // diagnostics.Add(new Diagnostic
-            // {
-            //    Range = new Range(
-            //        new Position(0, 0),
-            //        new Position(0, 0)
-            //        ),
-            //    Code = "test-code",
-            //    Source = "Docfx",
-            //    Severity = DiagnosticSeverity.Error,
-            //    Message = "Test message",
-            // });
 
             errors.ForEach(error =>
             {

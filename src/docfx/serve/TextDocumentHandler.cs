@@ -68,6 +68,14 @@ namespace Microsoft.Docs.Build
                     Diagnostics = new Container<Diagnostic>(diagnostics),
                 });
 
+            if (_buildContext.EnablePreview)
+            {
+                _languageServer.SendNotification<PreviewUpdatedNotification>("docfx/preview/update", new PreviewUpdatedNotification
+                {
+                    Content = content,
+                });
+            }
+
             //_languageServer.SendNotification(
             //    new PublishDiagnosticsParams
             //    {
@@ -142,4 +150,12 @@ namespace Microsoft.Docs.Build
             return new TextDocumentAttributes(uri, "csharp");
         }
     }
+
+    internal class PreviewUpdatedNotification
+    {
+        //public string Header { get; set; } = string.Empty;
+
+        public string Content { get; set; } = string.Empty;
+    }
+
 }

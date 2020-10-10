@@ -27,7 +27,7 @@ namespace Microsoft.Docs.Build
         private readonly DocumentSelector _documentSelector = new DocumentSelector(
             new DocumentFilter()
             {
-                Pattern = "**/*.md",
+                Pattern = "**/*.{md,yml}",
             }
         );
 
@@ -57,7 +57,7 @@ namespace Microsoft.Docs.Build
             //_logger.LogDebug("Debug");
             //_logger.LogTrace("Trace");
 
-            var (errors, content) = _buildCore.BuildFile(notification.TextDocument.Uri, notification.ContentChanges.First().Text);
+            var (errors, title, content) = _buildCore.BuildFile(notification.TextDocument.Uri, notification.ContentChanges.First().Text);
 
             var diagnostics = _buildCore.ConvertToDiagnostics(errors);
 
@@ -72,6 +72,7 @@ namespace Microsoft.Docs.Build
             {
                 _languageServer.SendNotification<PreviewUpdatedNotification>("docfx/preview/update", new PreviewUpdatedNotification
                 {
+                    Header = title ?? string.Empty,
                     Content = content,
                 });
             }
@@ -103,13 +104,23 @@ namespace Microsoft.Docs.Build
 
         public async Task<Unit> Handle(DidOpenTextDocumentParams notification, CancellationToken token)
         {
-            await Task.Yield();
-            _languageServer.ShowMessage(new ShowMessageParams
+            while (_buildContext.DocsetPath == null)
             {
-                Type = MessageType.Info,
-                Message = $"Opening document {notification.TextDocument.Uri} detected",
-            });
-            // var scope = await _configuration.GetScopedConfiguration(notification.TextDocument.Uri);
+                await Task.Delay(100);
+            }
+
+            _logger.LogInformation($"Validating document {notification.TextDocument.Uri}");
+            var (errors, title, content) = _buildCore.BuildFile(notification.TextDocument.Uri, notification.TextDocument.Text);
+
+            var diagnostics = _buildCore.ConvertToDiagnostics(errors);
+
+            _languageServer.TextDocument.PublishDiagnostics(
+                new PublishDiagnosticsParams
+                {
+                    Uri = notification.TextDocument.Uri,
+                    Diagnostics = new Container<Diagnostic>(diagnostics),
+                });
+
             return Unit.Value;
         }
 
@@ -153,7 +164,7 @@ namespace Microsoft.Docs.Build
 
     internal class PreviewUpdatedNotification
     {
-        //public string Header { get; set; } = string.Empty;
+        public string Header { get; set; } = string.Empty;
 
         public string Content { get; set; } = string.Empty;
     }

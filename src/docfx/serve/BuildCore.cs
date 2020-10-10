@@ -28,7 +28,7 @@ namespace Microsoft.Docs.Build
             _languageServer = languageServer;
         }
 
-        public (List<Error>, string content) BuildFile(DocumentUri uri, string textContent)
+        public (List<Error>, string? title, string content) BuildFile(DocumentUri uri, string textContent)
         {
             var docsetRelativePath = Path.GetRelativePath(_buildContext.DocsetPath!, uri.GetFileSystemPath());
             var file = FilePath.Content(PathString.DangerousCreate(docsetRelativePath));
@@ -36,19 +36,19 @@ namespace Microsoft.Docs.Build
             Context.Input.RegisterInMemoryCache(file, textContent);
             Context.ErrorBuilder.ClearErrorsOnFile(file);
 
-            var content = BuildFileCore(Context, file);
+            var result = BuildFileCore(Context, file);
             var errors = Context.ErrorBuilder.GetErrorsOnFile(file);
 
-            return (errors, content);
+            return (errors, result.title, result.content);
         }
 
-        private static string BuildFileCore(Context context, FilePath path)
+        private static (string? title, string content) BuildFileCore(Context context, FilePath path)
         {
             var file = context.DocumentProvider.GetDocument(path);
             return file.ContentType switch
             {
                 ContentType.Page => BuildPage.Build(context, file),
-                _ => string.Empty,
+                _ => (string.Empty, string.Empty),
             };
 
             // Parallel.Invoke(
@@ -71,8 +71,8 @@ namespace Microsoft.Docs.Build
                 diagnostics.Add(new Diagnostic
                 {
                     Range = new Range(
-                        new Position(source.Line - 1, source.Column - 1),
-                        new Position(source.EndLine - 1, source.EndColumn - 1)),
+                        new Position(ConvertLocation(source.Line), ConvertLocation(source.Column)),
+                        new Position(ConvertLocation(source.EndLine), ConvertLocation(source.EndColumn))),
                     Code = error.Code,
                     Source = "Docfx",
                     Severity = error.Level switch
@@ -88,6 +88,12 @@ namespace Microsoft.Docs.Build
             });
 
             return diagnostics;
+
+            int ConvertLocation(int original)
+            {
+                var target = original - 1;
+                return target < 0 ? 0 : target;
+            }
         }
     }
 }

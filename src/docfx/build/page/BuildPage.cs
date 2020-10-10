@@ -12,7 +12,7 @@ namespace Microsoft.Docs.Build
 {
     internal static class BuildPage
     {
-        public static string Build(Context context, Document file)
+        public static (string? title, string content) Build(Context context, Document file)
         {
             Debug.Assert(file.ContentType == ContentType.Page);
 
@@ -20,7 +20,7 @@ namespace Microsoft.Docs.Build
             var sourceModel = Load(errors, context, file);
             if (context.ErrorBuilder.FileHasError(file.FilePath))
             {
-                return string.Empty;
+                return (string.Empty, string.Empty);
             }
 
             var (output, metadata) = file.IsHtml
@@ -30,7 +30,7 @@ namespace Microsoft.Docs.Build
             // Just for preview
             TemplateModel templateModel = (output as TemplateModel)!;
             templateModel.RawMetadata.TryGetValue("_op_rawTitle", out var rawTitle);
-            return rawTitle?.ToString() + templateModel.Content;
+            return (rawTitle?.ToString(), templateModel.Content);
 
             var outputPath = context.DocumentProvider.GetOutputPath(file.FilePath);
 

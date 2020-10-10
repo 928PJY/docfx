@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.WorkDone;
+using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Serilog;
 
@@ -17,6 +18,8 @@ namespace Microsoft.Docs.Build
 {
     public class Serve
     {
+        private static readonly bool demo = true;
+
         public static bool Run(string workingDirectory, CommandLineOptions options)
         {
             MainAsync(workingDirectory, options).Wait();
@@ -89,10 +92,16 @@ namespace Microsoft.Docs.Build
                             Message = "Context preparing done",
                         });
 
-                        Task.Delay(2000).Wait();
+                        if (demo) Task.Delay(2000).Wait();
 
                         buildContext.Context = context;
                         buildContext.DocsetPath = docset.docsetPath;
+
+                        languageServer.Window.ShowMessage(new ShowMessageParams()
+                        {
+                            Type = MessageType.Info,
+                            Message = "Ready to go!",
+                        });
                     })
             );
 
@@ -141,7 +150,8 @@ namespace Microsoft.Docs.Build
                     return true;
                 }
 
-                Task.Delay(2000).Wait();
+                if (demo) Task.Delay(2000).Wait();
+
                 manager.OnNext(new WorkDoneProgressReport()
                 {
                     Percentage = 80,
@@ -154,7 +164,8 @@ namespace Microsoft.Docs.Build
                 var sourceMap = new SourceMap(errors, new PathString(buildOptions.DocsetPath), config, fileResolver);
                 var validationRules = GetContentValidationRules(config, fileResolver);
 
-                Task.Delay(2000).Wait();
+                if (demo) Task.Delay(2000).Wait();
+
                 manager.OnNext(new WorkDoneProgressReport()
                 {
                     Percentage = 90,

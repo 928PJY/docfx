@@ -45,10 +45,10 @@ namespace Microsoft.Docs.Build
         public Task<PreviewResponse> Handle(PreviewParams request, CancellationToken cancellationToken)
         {
             _buildContext.EnablePreview = true;
-            var (_, content) = _buildCore.BuildFile(request.Uri!, request.Text);
+            var (_, title, content) = _buildCore.BuildFile(request.Uri!, request.Text);
             return Task.FromResult(new PreviewResponse()
             {
-                // Header = "<h1>This is a H1 Header</h1>",
+                Header = title ?? string.Empty,
                 Content = content,
             });
         }
@@ -72,7 +72,7 @@ namespace Microsoft.Docs.Build
 
     internal class PreviewResponse
     {
-        //public string Header { get; set; } = string.Empty;
+        public string Header { get; set; } = string.Empty;
 
         public string Content { get; set; } = string.Empty;
     }

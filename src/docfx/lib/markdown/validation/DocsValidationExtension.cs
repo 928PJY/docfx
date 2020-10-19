@@ -19,7 +19,9 @@ namespace Microsoft.Docs.Build
         public static MarkdownPipelineBuilder UseDocsValidation(
             this MarkdownPipelineBuilder builder,
             MarkdownEngine markdownEngine,
+#pragma warning disable CA1801 // Review unused parameters
             ContentValidator contentValidator,
+#pragma warning restore CA1801 // Review unused parameters
             Func<MonikerList> getFileLevelMonikers,
             Func<string?> getCanonicalVersion)
         {

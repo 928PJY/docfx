@@ -31,32 +31,6 @@ namespace Microsoft.Docs.Build
             TemplateModel templateModel = (output as TemplateModel)!;
             templateModel.RawMetadata.TryGetValue("_op_rawTitle", out var rawTitle);
             return (rawTitle?.ToString(), templateModel.Content);
-
-            var outputPath = context.DocumentProvider.GetOutputPath(file.FilePath);
-
-            if (!context.ErrorBuilder.FileHasError(file.FilePath) && !context.Config.DryRun)
-            {
-                if (context.Config.OutputType == OutputType.Json)
-                {
-                    context.Output.WriteJson(outputPath, output);
-                }
-                else if (output is string str)
-                {
-                    context.Output.WriteText(outputPath, str);
-                }
-                else
-                {
-                    context.Output.WriteJson(Path.ChangeExtension(outputPath, ".json"), output);
-                }
-
-                if (context.Config.Legacy && file.IsHtml)
-                {
-                    var metadataPath = outputPath.Substring(0, outputPath.Length - ".raw.page.json".Length) + ".mta.json";
-                    context.Output.WriteJson(metadataPath, metadata);
-                }
-            }
-
-            context.PublishModelBuilder.SetPublishItem(file.FilePath, metadata, outputPath);
         }
 
         private static (object output, JObject metadata) CreatePageOutput(
@@ -208,7 +182,6 @@ namespace Microsoft.Docs.Build
             errors.AddIfNotNull(MergeConflict.CheckMergeConflictMarker(content, file.FilePath));
 
             // context.ContentValidator.ValidateSensitiveLanguage(content, file);
-
             var userMetadata = context.MetadataProvider.GetMetadata(errors, file.FilePath);
 
             context.MetadataValidator.ValidateMetadata(errors, userMetadata.RawJObject, file.FilePath);

@@ -16,9 +16,11 @@ using Serilog;
 
 namespace Microsoft.Docs.Build
 {
-    public class Serve
+    public static class Serve
     {
-        private static readonly bool demo = true;
+#pragma warning disable CA1802 // Use literals where appropriate
+        private static readonly bool demo = false;
+#pragma warning restore CA1802 // Use literals where appropriate
 
         public static bool Run(string workingDirectory, CommandLineOptions options)
         {
@@ -28,12 +30,11 @@ namespace Microsoft.Docs.Build
 
         private static async Task MainAsync(string workingDirectory, CommandLineOptions commandLineOptions)
         {
-            //Debugger.Launch();
-            //while (!Debugger.IsAttached)
-            //{
-            //    await Task.Delay(100);
-            //}
-
+            // Debugger.Launch();
+            // while (!Debugger.IsAttached)
+            // {
+            //     await Task.Delay(100);
+            // }
             Serilog.Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
@@ -57,13 +58,16 @@ namespace Microsoft.Docs.Build
                     {
                         services.AddSingleton<BuildContext>();
                     })
-                    .OnInitialize(async (server, request, token) =>
+                    .OnInitialize((server, request, token) =>
                     {
+                        return Task.CompletedTask;
                     })
-                    .OnInitialized(async (server, request, response, token) =>
+                    .OnInitialized((server, request, response, token) =>
                     {
+                        return Task.CompletedTask;
                     })
-                    .OnStarted(async (languageServer, result, token) => {
+                    .OnStarted(async (languageServer, result, token) =>
+                    {
                         using var manager = await languageServer.WorkDoneManager.Create(
                             new WorkDoneProgressBegin()
                             {
@@ -92,7 +96,10 @@ namespace Microsoft.Docs.Build
                             Message = "Context preparing done",
                         });
 
-                        if (demo) Task.Delay(2000).Wait();
+                        if (demo)
+                        {
+                            Task.Delay(2000).Wait();
+                        }
 
                         buildContext.Context = context;
                         buildContext.DocsetPath = docset.docsetPath;
@@ -102,8 +109,7 @@ namespace Microsoft.Docs.Build
                             Type = MessageType.Info,
                             Message = "Ready to go!",
                         });
-                    })
-            );
+                    }));
 
             await server.WaitForExit;
         }
@@ -115,7 +121,7 @@ namespace Microsoft.Docs.Build
             string? outputPath,
             CommandLineOptions options,
             IWorkDoneObserver manager,
-            out Context context)
+            out Context? context)
         {
             var restoreFetchOptions = options.NoCache ? FetchOptions.Latest : FetchOptions.UseCache;
             var buildFetchOptions = options.NoRestore ? FetchOptions.NoFetch : FetchOptions.UseCache;
@@ -150,7 +156,10 @@ namespace Microsoft.Docs.Build
                     return true;
                 }
 
-                if (demo) Task.Delay(2000).Wait();
+                if (demo)
+                {
+                    Task.Delay(2000).Wait();
+                }
 
                 manager.OnNext(new WorkDoneProgressReport()
                 {
@@ -160,11 +169,13 @@ namespace Microsoft.Docs.Build
 
                 // TODO: this step need to be run for each changed file
                 // new OpsPreProcessor(config, errors, buildOptions).Run();
-
                 var sourceMap = new SourceMap(errors, new PathString(buildOptions.DocsetPath), config, fileResolver);
                 var validationRules = GetContentValidationRules(config, fileResolver);
 
-                if (demo) Task.Delay(2000).Wait();
+                if (demo)
+                {
+                    Task.Delay(2000).Wait();
+                }
 
                 manager.OnNext(new WorkDoneProgressReport()
                 {
@@ -178,7 +189,6 @@ namespace Microsoft.Docs.Build
 
                 // TODO: run after each file build
                 // new OpsPostProcessor(config, errors, buildOptions).Run();
-
                 return !errors.HasError;
             }
             catch (Exception ex) when (DocfxException.IsDocfxException(ex, out var dex))

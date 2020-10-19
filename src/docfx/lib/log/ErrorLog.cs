@@ -97,7 +97,7 @@ namespace Microsoft.Docs.Build
 
             if (error.Source?.File != null)
             {
-                var errorsOnCurrentFile = _fileErrors.GetOrAdd(error.Source?.File, (file) => new List<Error>());
+                var errorsOnCurrentFile = _fileErrors.GetOrAdd(error.Source?.File!, (file) => new List<Error>());
                 errorsOnCurrentFile.Add(error);
             }
         }

@@ -1,25 +1,22 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DotLiquid.Util;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.JsonRpc;
 using OmniSharp.Extensions.LanguageServer.Protocol;
-using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
-using OmniSharp.Extensions.LanguageServer.Protocol.Document;
-using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
 namespace Microsoft.Docs.Build
 {
     internal class PreviewHandler : IPreviewHandler
     {
+#pragma warning disable SA1401 // Fields should be private
         public static bool EnablePreview;
+#pragma warning restore SA1401 // Fields should be private
 
         private readonly ILogger<TextDocumentHandler> _logger;
         private readonly ILanguageServer _languageServer;

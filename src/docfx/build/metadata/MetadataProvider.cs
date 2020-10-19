@@ -17,8 +17,7 @@ namespace Microsoft.Docs.Build
         private readonly JObject _globalMetadata;
         private readonly List<(Func<string, bool> glob, string key, JToken value)> _rules = new List<(Func<string, bool> glob, string key, JToken value)>();
 
-        private readonly ConcurrentDictionary<FilePath, UserMetadata> _metadataCache = new ConcurrentDictionary<FilePath, UserMetadata>();
-
+        // private readonly ConcurrentDictionary<FilePath, UserMetadata> _metadataCache = new ConcurrentDictionary<FilePath, UserMetadata>();
         public ICollection<string> HtmlMetaHidden { get; }
 
         public IReadOnlyDictionary<string, string> HtmlMetaNames { get; }
@@ -66,7 +65,7 @@ namespace Microsoft.Docs.Build
                     return new UserMetadata();
 
                 default:
-                    return _metadataCache.GetOrAdd(path, _ => GetMetadataCore(errors, path, contentType));
+                    return GetMetadataCore(errors, path, contentType);
             }
         }
 

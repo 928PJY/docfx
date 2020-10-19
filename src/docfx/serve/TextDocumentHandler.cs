@@ -1,9 +1,9 @@
-using System.Collections.Generic;
-using System.IO;
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DotLiquid.Util;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -12,7 +12,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
 namespace Microsoft.Docs.Build
 {
@@ -28,13 +27,10 @@ namespace Microsoft.Docs.Build
             new DocumentFilter()
             {
                 Pattern = "**/*.{md,yml}",
-            }
-        );
+            });
 
-        private Context Context => _buildContext.Context!;
-
-        private SynchronizationCapability _capability;
-
+        // private Context Context => _buildContext.Context!;
+        // private SynchronizationCapability _capability;
         public TextDocumentHandler(
             ILogger<TextDocumentHandler> logger,
             ILanguageServer languageServer,
@@ -54,9 +50,9 @@ namespace Microsoft.Docs.Build
         public Task<Unit> Handle(DidChangeTextDocumentParams notification, CancellationToken token)
         {
             _logger.LogInformation($"Validating document {notification.TextDocument.Uri}");
-            //_logger.LogDebug("Debug");
-            //_logger.LogTrace("Trace");
 
+            // _logger.LogDebug("Debug");
+            // _logger.LogTrace("Trace");
             var (errors, title, content) = _buildCore.BuildFile(notification.TextDocument.Uri, notification.ContentChanges.First().Text);
 
             var diagnostics = _buildCore.ConvertToDiagnostics(errors);
@@ -77,13 +73,12 @@ namespace Microsoft.Docs.Build
                 });
             }
 
-            //_languageServer.SendNotification(
+            // _languageServer.SendNotification(
             //    new PublishDiagnosticsParams
             //    {
             //        Uri = notification.TextDocument.Uri,
             //        Diagnostics = new Container<Diagnostic>(diagnostics),
             //    });
-
             return Unit.Task;
         }
 
@@ -93,13 +88,12 @@ namespace Microsoft.Docs.Build
             return new TextDocumentChangeRegistrationOptions()
             {
                 DocumentSelector = _documentSelector,
-                SyncKind = Change
+                SyncKind = Change,
             };
         }
 
         public void SetCapability(SynchronizationCapability capability)
         {
-            _capability = capability;
         }
 
         public async Task<Unit> Handle(DidOpenTextDocumentParams notification, CancellationToken token)
@@ -152,7 +146,7 @@ namespace Microsoft.Docs.Build
             return new TextDocumentSaveRegistrationOptions()
             {
                 DocumentSelector = _documentSelector,
-                IncludeText = true
+                IncludeText = true,
             };
         }
 
@@ -162,11 +156,12 @@ namespace Microsoft.Docs.Build
         }
     }
 
+#pragma warning disable SA1402 // File may only contain a single type
     internal class PreviewUpdatedNotification
+#pragma warning restore SA1402 // File may only contain a single type
     {
         public string Header { get; set; } = string.Empty;
 
         public string Content { get; set; } = string.Empty;
     }
-
 }

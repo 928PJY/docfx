@@ -21,7 +21,7 @@ namespace Microsoft.Docs.Build
 
             if (Log.Verbose)
             {
-                Console.Write(scope.Name + "...\r");
+                // Console.Write(scope.Name + "...\r");
             }
 
             return scope;
@@ -54,7 +54,7 @@ namespace Microsoft.Docs.Build
             var percent = ((int)(100 * Math.Min(1.0, done / Math.Max(1.0, total)))).ToString();
             var duration = TimeSpan.FromSeconds(elapsedMs / 1000);
 
-            Console.Write($"{scope.Name}: {percent,3}% ({done}/{total}), {duration} {eol}");
+            // Console.Write($"{scope.Name}: {percent,3}% ({done}/{total}), {duration} {eol}");
         }
 
         public static string FormatTimeSpan(TimeSpan value)
@@ -93,7 +93,7 @@ namespace Microsoft.Docs.Build
                 var elapsedMs = Stopwatch.ElapsedMilliseconds;
                 if (Log.Verbose || elapsedMs > ProgressDelayMs)
                 {
-                    Console.WriteLine($"{Name} done in {FormatTimeSpan(Stopwatch.Elapsed)}");
+                    // Console.WriteLine($"{Name} done in {FormatTimeSpan(Stopwatch.Elapsed)}");
                 }
             }
         }

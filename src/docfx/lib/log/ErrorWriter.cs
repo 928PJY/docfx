@@ -76,8 +76,9 @@ namespace Microsoft.Docs.Build
                     Console.ForegroundColor = _errorCount > 0 ? ConsoleColor.Red
                                             : _warningCount > 0 ? ConsoleColor.Yellow
                                             : ConsoleColor.Magenta;
-                    Console.WriteLine();
-                    Console.WriteLine($"  {_errorCount} Error(s), {_warningCount} Warning(s), {_suggestionCount} Suggestion(s)");
+
+                    // Console.WriteLine();
+                    // Console.WriteLine($"  {_errorCount} Error(s), {_warningCount} Warning(s), {_suggestionCount} Suggestion(s)");
                 }
 
                 Console.ResetColor();

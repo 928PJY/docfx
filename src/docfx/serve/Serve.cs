@@ -26,6 +26,23 @@ namespace Microsoft.Docs.Build
             return true;
         }
 
+        private static async Task MainAsync1(string workingDirectory, CommandLineOptions commandLineOptions)
+        {
+            using var errors = new ErrorWriter(commandLineOptions.Log);
+            var docsets = ConfigLoader.FindDocsets(errors, workingDirectory, commandLineOptions);
+
+            var docset = docsets[0];
+            Prepare(
+                errors,
+                workingDirectory,
+                docset.docsetPath,
+                docset.outputPath,
+                commandLineOptions,
+                null,
+                out var context);
+            await Task.Delay(1000);
+        }
+
         private static async Task MainAsync(string workingDirectory, CommandLineOptions commandLineOptions)
         {
             Serilog.Log.Logger = new LoggerConfiguration()
@@ -121,7 +138,7 @@ namespace Microsoft.Docs.Build
             string docsetPath,
             string? outputPath,
             CommandLineOptions options,
-            IWorkDoneObserver manager,
+            IWorkDoneObserver? manager,
             out Context? context)
         {
             using var disposables = new DisposableCollector();
@@ -138,7 +155,7 @@ namespace Microsoft.Docs.Build
 #pragma warning restore CS0162 // Unreachable code detected
             }
 
-            manager.OnNext(new WorkDoneProgressReport()
+            manager?.OnNext(new WorkDoneProgressReport()
             {
                 Percentage = 10,
                 Message = "Config loaded, Start to restore external dependencies...",
@@ -162,7 +179,7 @@ namespace Microsoft.Docs.Build
 #pragma warning restore CS0162 // Unreachable code detected
             }
 
-            manager.OnNext(new WorkDoneProgressReport()
+            manager?.OnNext(new WorkDoneProgressReport()
             {
                 Percentage = 70,
                 Message = "Restore external dependencies finished",
@@ -184,7 +201,7 @@ namespace Microsoft.Docs.Build
 #pragma warning restore CS0162 // Unreachable code detected
                 }
 
-                manager.OnNext(new WorkDoneProgressReport()
+                manager?.OnNext(new WorkDoneProgressReport()
                 {
                     Percentage = 90,
                     Message = "Validation rule fetched, context preparing almost done",

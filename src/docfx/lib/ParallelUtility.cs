@@ -45,7 +45,7 @@ namespace Microsoft.Docs.Build
                 }
                 catch
                 {
-                    Console.WriteLine($"Error processing '{item}'");
+                    // Console.WriteLine($"Error processing '{item}'");
                     throw;
                 }
 
@@ -103,7 +103,7 @@ namespace Microsoft.Docs.Build
                 }
                 catch
                 {
-                    Console.WriteLine($"Error processing '{item}'");
+                    // Console.WriteLine($"Error processing '{item}'");
                     throw;
                 }
 

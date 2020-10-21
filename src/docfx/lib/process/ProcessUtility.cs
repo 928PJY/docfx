@@ -66,7 +66,9 @@ namespace Microsoft.Docs.Build
                 return arg.Replace(secret, secret.Length > 5 ? "***" + secret.Substring(secret.Length - 5) : "***");
             }
 
+#pragma warning disable CA1801 // Review unused parameters
             static void PipeStream(Stream input, Stream output1, Stream output2)
+#pragma warning restore CA1801 // Review unused parameters
             {
                 var console = Console.OpenStandardOutput();
                 var buffer = new byte[1024];
@@ -79,8 +81,8 @@ namespace Microsoft.Docs.Build
                         break;
                     }
 
-                    output1.Write(buffer, 0, bytesRead);
-                    output2.Write(buffer, 0, bytesRead);
+                    // output1.Write(buffer, 0, bytesRead);
+                    // output2.Write(buffer, 0, bytesRead);
                 }
             }
         }

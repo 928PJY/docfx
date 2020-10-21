@@ -20,13 +20,15 @@ namespace Microsoft.Docs.Build
             return new LogScope(() => t_verbose.Value = false);
         }
 
+#pragma warning disable CA1801 // Review unused parameters
         public static void Important(string message, ConsoleColor color)
+#pragma warning restore CA1801 // Review unused parameters
         {
             lock (Console.Out)
             {
-                Console.ForegroundColor = color;
-                Console.WriteLine(message);
-                Console.ResetColor();
+                // Console.ForegroundColor = color;
+                // Console.WriteLine(message);
+                // Console.ResetColor();
             }
         }
 
@@ -35,15 +37,17 @@ namespace Microsoft.Docs.Build
             Write(exception.ToString(), ConsoleColor.DarkRed);
         }
 
+#pragma warning disable CA1801 // Review unused parameters
         public static void Write(string message, ConsoleColor color = ConsoleColor.DarkGray)
+#pragma warning restore CA1801 // Review unused parameters
         {
             if (Verbose)
             {
                 lock (Console.Out)
                 {
-                    Console.ForegroundColor = color;
-                    Console.WriteLine(message);
-                    Console.ResetColor();
+                    // Console.ForegroundColor = color;
+                    // Console.WriteLine(message);
+                    // Console.ResetColor();
                 }
             }
         }

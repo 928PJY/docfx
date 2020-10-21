@@ -204,8 +204,7 @@ namespace Microsoft.Docs.Build
             var content = context.Input.ReadString(file);
             errors.AddIfNotNull(MergeConflict.CheckMergeConflictMarker(content, file));
 
-            context.ContentValidator.ValidateSensitiveLanguage(file, content);
-
+            // context.ContentValidator.ValidateSensitiveLanguage(file, content);
             var userMetadata = context.MetadataProvider.GetMetadata(errors, file);
 
             context.MetadataValidator.ValidateMetadata(errors, userMetadata.RawJObject, file);

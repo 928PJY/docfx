@@ -23,12 +23,11 @@ namespace Microsoft.Docs.Build
         {
             try
             {
-                Debugger.Launch();
-                while (!Debugger.IsAttached)
-                {
-                    Task.Delay(100).Wait();
-                }
-
+                // Debugger.Launch();
+                // while (!Debugger.IsAttached)
+                // {
+                //     Task.Delay(100).Wait();
+                // }
                 return Run(args);
             }
             catch (Exception ex)
@@ -61,7 +60,7 @@ namespace Microsoft.Docs.Build
         {
             if (args.Length == 1 && args[0] == "--version")
             {
-                Console.WriteLine(GetDocfxVersion());
+                // Console.WriteLine(GetDocfxVersion());
                 return 0;
             }
 
@@ -162,9 +161,11 @@ namespace Microsoft.Docs.Build
 
                 return (command, workingDirectory, options);
             }
+#pragma warning disable CS0168 // Variable is declared but never used
             catch (ArgumentSyntaxException ex)
+#pragma warning restore CS0168 // Variable is declared but never used
             {
-                Console.Write(ex.Message);
+                // Console.Write(ex.Message);
                 return default;
             }
         }
@@ -185,8 +186,8 @@ namespace Microsoft.Docs.Build
                 exception = ae.InnerException;
             }
 
-            Console.ResetColor();
-            Console.WriteLine();
+            // Console.ResetColor();
+            // Console.WriteLine();
 
             // windows command line does not have good emoji support
             // https://github.com/Microsoft/console/issues/190

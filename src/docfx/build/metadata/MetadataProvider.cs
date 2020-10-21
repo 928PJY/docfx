@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -17,8 +16,7 @@ namespace Microsoft.Docs.Build
         private readonly List<(Func<string, bool> glob, string key, JToken value)> _rules = new List<(Func<string, bool>, string, JToken)>();
         private readonly List<(Func<string, bool> glob, string key, JToken value)> _monikerRules = new List<(Func<string, bool>, string, JToken)>();
 
-        private readonly ConcurrentDictionary<FilePath, UserMetadata> _metadataCache = new ConcurrentDictionary<FilePath, UserMetadata>();
-
+        // private readonly ConcurrentDictionary<FilePath, UserMetadata> _metadataCache = new ConcurrentDictionary<FilePath, UserMetadata>();
         public ICollection<string> HtmlMetaHidden { get; }
 
         public IReadOnlyDictionary<string, string> HtmlMetaNames { get; }
@@ -60,7 +58,8 @@ namespace Microsoft.Docs.Build
 
         public UserMetadata GetMetadata(ErrorBuilder errors, FilePath file)
         {
-            return _metadataCache.GetOrAdd(file, _ => GetMetadataCore(errors, file));
+            // return _metadataCache.GetOrAdd(file, _ => GetMetadataCore(errors, file));
+            return GetMetadataCore(errors, file);
         }
 
         private UserMetadata GetMetadataCore(ErrorBuilder errors, FilePath file)

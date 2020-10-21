@@ -186,6 +186,12 @@ namespace Microsoft.Docs.Build
             public static Error ConfigNotFound(string docsetPath)
                 => new Error(ErrorLevel.Error, "config-not-found", $"Can't find docfx config file in '{docsetPath}'.");
 
+            public static Error MultipleDocsetFound()
+                => new Error(ErrorLevel.Error, "multiple-docsets-found", $"Multiple docsets found in the current repository, please indicate one docset to serve by command option '--docset-name'.");
+
+            public static Error DocsetNotFound(string docsetName)
+                => new Error(ErrorLevel.Error, "docset-not-found", $"Docset with name '{docsetName}' is not found in the current repository.");
+
             /// <summary>
             /// Build an OPS repo with a docset name that isn't provisioned.
             /// </summary>

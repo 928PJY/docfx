@@ -213,9 +213,8 @@ namespace Microsoft.Docs.Build
             var conceptual = new ConceptualModel { Title = userMetadata.Title };
             var html = context.MarkdownEngine.ToHtml(errors, content, new SourceInfo(file), MarkdownPipelineType.Markdown, conceptual);
 
-            context.SearchIndexBuilder.SetTitle(file, conceptual.Title);
-            context.ContentValidator.ValidateTitle(file, conceptual.Title, userMetadata.TitleSuffix);
-
+            // context.SearchIndexBuilder.SetTitle(file, conceptual.Title);
+            // context.ContentValidator.ValidateTitle(file, conceptual.Title, userMetadata.TitleSuffix);
             ProcessConceptualHtml(conceptual, context, file, html);
 
             return context.Config.DryRun ? new JObject() : JsonUtility.ToJObject(conceptual);

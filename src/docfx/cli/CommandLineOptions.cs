@@ -19,7 +19,9 @@ namespace Microsoft.Docs.Build
         public bool Force;
         public bool NoCache;
         public bool NoRestore;
+        public string? Http;
         public string? Template;
+        public string? DocsetName;
 
         public JObject? StdinConfig;
 
@@ -44,6 +46,11 @@ namespace Microsoft.Docs.Build
             if (Template != null)
             {
                 config["template"] = Template;
+            }
+
+            if (Http != null)
+            {
+                config["http"] = JsonUtility.DeserializeData<JObject>(Http, null);
             }
 
             return config;

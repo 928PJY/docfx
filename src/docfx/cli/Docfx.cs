@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json.Linq;
 
@@ -22,6 +23,12 @@ namespace Microsoft.Docs.Build
         {
             try
             {
+                Debugger.Launch();
+                while (!Debugger.IsAttached)
+                {
+                    Task.Delay(100).Wait();
+                }
+
                 return Run(args);
             }
             catch (Exception ex)
@@ -81,6 +88,7 @@ namespace Microsoft.Docs.Build
                     "new" => New.Run(workingDirectory, options),
                     "restore" => Restore.Run(workingDirectory, options),
                     "build" => Build.Run(workingDirectory, options),
+                    "serve" => Serve.Run(workingDirectory, options),
                     _ => false,
                 } ? 1 : 0;
             }
@@ -129,6 +137,21 @@ namespace Microsoft.Docs.Build
                     syntax.DefineOption("no-dry-sync", ref options.NoDrySync, "Do not run dry sync for learn validation.");
                     syntax.DefineOption("no-restore", ref options.NoRestore, "Do not restore dependencies before build.");
                     syntax.DefineOption("no-cache", ref options.NoCache, "Do not use cache dependencies in build, always fetch latest dependencies.");
+                    DefineCommonOptions(syntax, ref workingDirectory, options);
+
+                    // Serve command
+                    syntax.DefineCommand("serve", ref command, "Serve a docset.");
+                    syntax.DefineOption("o|output", ref options.Output, "Output directory in which to place built artifacts.");
+                    syntax.DefineOption("docset-name", ref options.DocsetName, "Name of the docset need to serve");
+                    syntax.DefineOption("no-restore", ref options.NoRestore, "Do not restore dependencies before build.");
+                    syntax.DefineOption("dry-run", ref options.DryRun, "Do not produce build artifact and only produce validation result.");
+                    syntax.DefineOption("http", ref options.Http, "Do not restore dependencies before build.");
+                    syntax.DefineOption(
+                        "output-type",
+                        ref options.OutputType,
+                        value => Enum.TryParse<OutputType>(value, ignoreCase: true, out var result) ? result : default,
+                        "Output directory in which to place built artifacts.");
+
                     DefineCommonOptions(syntax, ref workingDirectory, options);
                 });
 

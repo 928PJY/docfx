@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Docs.Build
@@ -26,6 +28,8 @@ namespace Microsoft.Docs.Build
         private readonly MemoryCache<FilePath, JToken> _jsonTokenCache = new MemoryCache<FilePath, JToken>();
         private readonly MemoryCache<FilePath, JToken> _yamlTokenCache = new MemoryCache<FilePath, JToken>();
         private readonly MemoryCache<PathString, byte[]?> _gitBlobCache = new MemoryCache<PathString, byte[]?>();
+
+        private readonly MemoryCache<FilePath, string> _inMemoryContent = new MemoryCache<FilePath, string>();
 
         private readonly ConcurrentDictionary<FilePath, SourceInfo<string?>> _mimeTypeCache = new ConcurrentDictionary<FilePath, SourceInfo<string?>>();
 
@@ -101,6 +105,13 @@ namespace Microsoft.Docs.Build
             return package.TryGetPhysicalPath(path);
         }
 
+        public void RegisterInMemoryCache(FilePath path, string content)
+        {
+            _inMemoryContent.AddOrUpdate(path, content, (_, oldValue) => content);
+            _jsonTokenCache.Remove(path, out _);
+            _yamlTokenCache.Remove(path, out _);
+        }
+
         /// <summary>
         /// Reads the specified file as a string.
         /// </summary>
@@ -149,7 +160,15 @@ namespace Microsoft.Docs.Build
         /// </summary>
         public TextReader ReadText(FilePath file)
         {
-            return new StreamReader(ReadStream(file));
+            if (_inMemoryContent.TryGetValue(file, out var content))
+            {
+                byte[] byteArray = Encoding.ASCII.GetBytes(content);
+                return new StreamReader(new MemoryStream(byteArray));
+            }
+            else
+            {
+                return new StreamReader(ReadStream(file));
+            }
         }
 
         public Stream ReadStream(FilePath file)

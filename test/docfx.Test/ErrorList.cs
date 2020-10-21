@@ -20,9 +20,19 @@ namespace Microsoft.Docs.Build
 
         public override void Add(Error error) => _items.Add(error);
 
+        public override void ClearErrorsOnFile(FilePath file)
+        {
+            throw new NotImplementedException();
+        }
+
         public override bool FileHasError(FilePath file) => throw new NotSupportedException();
 
         public IEnumerator<Error> GetEnumerator() => _items.GetEnumerator();
+
+        public override List<Error> GetErrorsOnFile(FilePath file)
+        {
+            throw new NotImplementedException();
+        }
 
         IEnumerator IEnumerable.GetEnumerator() => _items.GetEnumerator();
     }

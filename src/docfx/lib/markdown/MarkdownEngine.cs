@@ -338,7 +338,7 @@ namespace Microsoft.Docs.Build
 
         private string GetImageLink(SourceInfo<string> href, MarkdownObject origin, string? altText, int imageIndex)
         {
-            _contentValidator.ValidateImageLink(GetRootFilePath(), href, origin, altText, imageIndex);
+            // _contentValidator.ValidateImageLink(GetRootFilePath(), href, origin, altText, imageIndex);
             var link = GetLink(href);
             return link;
         }

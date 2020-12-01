@@ -16,6 +16,7 @@ namespace Microsoft.Docs.Build
         private readonly MonikerProvider _monikerProvider;
         private readonly BuildScope _buildScope;
         private readonly Lazy<PublishUrlMap> _publishUrlMap;
+        private readonly DirectoryPackage _docsetPackage;
 
         private readonly IReadOnlyDictionary<FilePath, string> _redirectUrls;
         private readonly HashSet<PathString> _redirectPaths;
@@ -29,6 +30,7 @@ namespace Microsoft.Docs.Build
             string hostName,
             ErrorBuilder errors,
             BuildScope buildScope,
+            DirectoryPackage docsetPackage,
             Repository? repository,
             DocumentProvider documentProvider,
             MonikerProvider monikerProvider,
@@ -36,6 +38,7 @@ namespace Microsoft.Docs.Build
         {
             _errors = errors;
             _buildScope = buildScope;
+            _docsetPackage = docsetPackage;
             _documentProvider = documentProvider;
             _monikerProvider = monikerProvider;
 
@@ -149,13 +152,14 @@ namespace Microsoft.Docs.Build
             return redirectUrls;
         }
 
-        private static RedirectionItem[] LoadRedirectionModel(ErrorBuilder errors, string docsetPath, Repository? repository)
+        private RedirectionItem[] LoadRedirectionModel(ErrorBuilder errors, string docsetPath, Repository? repository)
         {
             foreach (var fullPath in ProbeRedirectionFiles(docsetPath, repository))
             {
-                if (File.Exists(fullPath))
+                var pathString = new PathString(fullPath);
+                if (_docsetPackage.Exists(pathString))
                 {
-                    var content = File.ReadAllText(fullPath);
+                    var content = _docsetPackage.ReadString(pathString);
                     var filePath = new FilePath(Path.GetRelativePath(docsetPath, fullPath));
                     var model = fullPath.EndsWith(".yml")
                         ? YamlUtility.Deserialize<RedirectionModel>(errors, content, filePath)

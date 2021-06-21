@@ -33,5 +33,14 @@ namespace Microsoft.Docs.Build
 
             _notificationListener.OnNotificationSent();
         }
+
+        public void UpdatePreviewPage(string? title, string content)
+        {
+            _languageServer.SendNotification("docfx/preview/update", new PreviewUpdatedNotification
+            {
+                Header = title ?? string.Empty,
+                Content = content,
+            });
+        }
     }
 }

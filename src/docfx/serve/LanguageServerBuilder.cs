@@ -29,6 +29,9 @@ namespace Microsoft.Docs.Build
         private readonly PathString _workingDirectory;
         private List<PathString> _filesWithDiagnostics = new();
 
+        private bool _enablePreview;
+        private PathString _previewFile;
+
         public LanguageServerBuilder(
             ILoggerFactory loggerFactory,
             CommandLineOptions options,
@@ -54,6 +57,17 @@ namespace Microsoft.Docs.Build
             _buildChannel.Writer.TryWrite(true);
         }
 
+        public void EnablePreview(PathString previewFile)
+        {
+            _enablePreview = true;
+            _previewFile = previewFile;
+        }
+
+        public (string title, string content) GetPreviewOutput()
+        {
+            return _builder.GetBuildOutput(_previewFile);
+        }
+
         public async Task Run(CancellationToken cancellationToken = default)
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -76,9 +90,14 @@ namespace Microsoft.Docs.Build
                     // But the responses of language server are handled sequentially, which cause the deadlock.
                     await Task.Yield();
                     Telemetry.SetIsRealTimeBuild(true);
-                    _builder.Build(errors, progressReporter, filesToBuild.Select(f => f.Value).ToArray());
+                    _builder.Build(errors, progressReporter, filesToBuild.Select(f => f.Value).ToArray(), true);
 
                     PublishDiagnosticsParams(errors, filesToBuild);
+
+                    if (_enablePreview)
+                    {
+                        UpdatePreviewPage();
+                    }
 
                     operation.Complete();
                     _notificationListener.OnNotificationHandled();
@@ -115,6 +134,12 @@ namespace Microsoft.Docs.Build
             catch (OperationCanceledException)
             {
             }
+        }
+
+        private void UpdatePreviewPage()
+        {
+            var (title, content) = GetPreviewOutput();
+            _diagnosticPublisher.UpdatePreviewPage(title, content);
         }
 
         private async Task<LanguageServerProgressReporter> CreateProgressReporter()

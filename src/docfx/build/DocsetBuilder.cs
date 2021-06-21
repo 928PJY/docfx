@@ -53,6 +53,8 @@ namespace Microsoft.Docs.Build
         private readonly TocLoader _tocLoader;
         private readonly TocMap _tocMap;
 
+        private ConcurrentDictionary<FilePath, (string title, string content)> _buildOutput = new();
+
         public BuildOptions BuildOptions => _buildOptions;
 
         private DocsetBuilder(
@@ -157,7 +159,16 @@ namespace Microsoft.Docs.Build
             }
         }
 
-        public void Build(string[]? files)
+        public (string title, string content) GetBuildOutput(string file)
+        {
+            if (_buildOutput.TryGetValue(FilePath.Content(new PathString(file)), out var result))
+            {
+                return result;
+            }
+            return (string.Empty, string.Empty);
+        }
+
+        public void Build(string[]? files, bool needOutput = false)
         {
             try
             {
@@ -175,7 +186,7 @@ namespace Microsoft.Docs.Build
 
                 using (var scope = Progress.Start($"Building {filesToBuild.Count} files"))
                 {
-                    ParallelUtility.ForEach(scope, _errors, filesToBuild, file => BuildFile(file, _contentValidator, resourceBuilder, pageBuilder, tocBuilder, redirectionBuilder));
+                    ParallelUtility.ForEach(scope, _errors, filesToBuild, file => BuildFile(file, _contentValidator, resourceBuilder, pageBuilder, tocBuilder, redirectionBuilder, needOutput));
                     ParallelUtility.ForEach(scope, _errors, _linkResolver.GetAdditionalResources(), file => resourceBuilder.Build(file));
                 }
 
@@ -227,6 +238,17 @@ namespace Microsoft.Docs.Build
             }
         }
 
+        public bool TryGetBuildOutput(string file, out (string title, string content) output)
+        {
+            var filePath = FilePath.Content(new PathString(file));
+            if (_buildOutput.TryGetValue(filePath, out output))
+            {
+                return true;
+            }
+            output = (string.Empty, string.Empty);
+            return false;
+        }
+
         private HashSet<FilePath> GetFilesToBuild(string[]? files)
         {
             HashSet<FilePath> filesToBuild = new();
@@ -270,7 +292,8 @@ namespace Microsoft.Docs.Build
             ResourceBuilder resourceBuilder,
             PageBuilder pageBuilder,
             TocBuilder tocBuilder,
-            RedirectionBuilder redirectionBuilder)
+            RedirectionBuilder redirectionBuilder,
+            bool needOutput = false)
         {
             var contentType = _documentProvider.GetContentType(file);
 
@@ -286,7 +309,8 @@ namespace Microsoft.Docs.Build
                     resourceBuilder.Build(file);
                     break;
                 case ContentType.Page:
-                    pageBuilder.Build(_errors, file);
+                    var (title, content) = pageBuilder.Build(_errors, file, needOutput);
+                    _buildOutput.AddOrUpdate(file, (title, content), (_, _) => (title, content));
                     break;
                 case ContentType.Redirection:
                     redirectionBuilder.Build(_errors, file);

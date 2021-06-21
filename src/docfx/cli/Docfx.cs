@@ -121,6 +121,8 @@ namespace Microsoft.Docs.Build
                 "--port", () => 8080, "The port used to communicate with the client"));
             command.AddOption(new Option<bool>(
                 "--no-cache", "Always fetch latest dependencies in build."));
+            command.AddOption(new Option<OutputType>(
+                "--output-type", "Output directory in which to place built artifacts."));
             return command;
         }
 

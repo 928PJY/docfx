@@ -33,6 +33,7 @@ namespace Microsoft.Docs.Build
                         .WithOutput(output)
                         .ConfigureLogging(x => x.AddLanguageProtocolLogging().SetMinimumLevel(LogLevel.Trace))
                         .WithHandler<TextDocumentHandler>()
+                        .WithHandler<PreviewHandler>()
                         .WithHandler<DidChangeWatchedFilesHandler>()
                         .WithServices(services => services
                             .AddSingleton(notificationListener ?? new LanguageServerNotificationListener())

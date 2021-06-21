@@ -145,10 +145,10 @@ namespace Microsoft.Docs.Build
         {
             var content = CreateContent(file, mime, pageModel);
 
-            if (_config.DryRun)
-            {
-                return (new TemplateModel("", new JObject(), "", ""), new JObject());
-            }
+            //if (_config.DryRun)
+            //{
+            //    return (new TemplateModel("", new JObject(), "", ""), new JObject());
+            //}
 
             // Hosting layers treats empty content as 404, so generate an empty <div></div>
             if (string.IsNullOrWhiteSpace(content))

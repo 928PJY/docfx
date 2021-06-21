@@ -49,7 +49,7 @@ namespace Microsoft.Docs.Build
             return errors.HasError;
         }
 
-        public void Build(ErrorBuilder errors, IProgress<string> progressReporter, string[]? files = null)
+        public void Build(ErrorBuilder errors, IProgress<string> progressReporter, string[]? files = null, bool needOutput = false)
         {
             if (files?.Length == 0)
             {
@@ -64,12 +64,28 @@ namespace Microsoft.Docs.Build
                 {
                     Parallel.ForEach(
                         _docsets.Value,
-                        docset => docset.Build(files is null ? null : Array.ConvertAll(files, path => GetPathToDocset(docset, path))));
+                        docset => docset.Build(files is null ? null : Array.ConvertAll(files, path => GetPathToDocset(docset, path)), needOutput));
                 }
                 catch (Exception ex) when (DocfxException.IsDocfxException(ex, out var dex))
                 {
                     _errors.AddRange(dex);
                 }
+            }
+        }
+
+        public (string title, string content) GetBuildOutput(PathString file)
+        {
+            using (Watcher.BeginScope())
+            using (_errors.BeginScope(new ErrorList()))
+            {
+                foreach (var docset in _docsets.Value)
+                {
+                    if (docset.TryGetBuildOutput(GetPathToDocset(docset, file), out var output))
+                    {
+                        return output;
+                    }
+                }
+                return (string.Empty, string.Empty);
             }
         }
 

@@ -78,7 +78,7 @@ namespace Microsoft.Docs.Build
             _learnHierarchyBuilder = learnHierarchyBuilder;
         }
 
-        public void Build(ErrorBuilder errors, FilePath file)
+        public (string title, string content) Build(ErrorBuilder errors, FilePath file, bool needOutput = false)
         {
             var sourceModel = file.Format switch
             {
@@ -88,35 +88,40 @@ namespace Microsoft.Docs.Build
 
             if (errors.FileHasError(file))
             {
-                return;
+                return (string.Empty, string.Empty);
             }
 
             var isContentRenderType = _documentProvider.GetRenderType(file) == RenderType.Content;
-            var (output, metadata) = isContentRenderType ? CreatePageOutput(errors, file, sourceModel) : CreateDataOutput(file, sourceModel);
+            var (output, metadata) = isContentRenderType ? CreatePageOutput(errors, file, sourceModel, needOutput) : CreateDataOutput(file, sourceModel);
             var outputPath = _documentProvider.GetOutputPath(file);
 
-            if (!errors.FileHasError(file) && !_config.DryRun)
-            {
-                if (output is string str)
-                {
-                    _output.WriteText(outputPath, str);
-                }
-                else
-                {
-                    _output.WriteJson(outputPath, output);
-                }
+            // Just for preview
+            var templateModel = (output as TemplateModel)!;
+            templateModel.RawMetadata.TryGetValue("_op_rawTitle", out var rawTitle);
+            return (rawTitle?.ToString() ?? string.Empty, templateModel.Content);
 
-                if (_config.OutputType == OutputType.PageJson && isContentRenderType)
-                {
-                    var metadataPath = outputPath.Substring(0, outputPath.Length - ".raw.page.json".Length) + ".mta.json";
-                    _output.WriteJson(metadataPath, metadata);
-                }
-            }
+            //if (!errors.FileHasError(file) && !_config.DryRun)
+            //{
+            //    if (output is string str)
+            //    {
+            //        _output.WriteText(outputPath, str);
+            //    }
+            //    else
+            //    {
+            //        _output.WriteJson(outputPath, output);
+            //    }
 
-            _publishModelBuilder.AddOrUpdate(file, metadata, outputPath);
+            //    if (_config.OutputType == OutputType.PageJson && isContentRenderType)
+            //    {
+            //        var metadataPath = outputPath.Substring(0, outputPath.Length - ".raw.page.json".Length) + ".mta.json";
+            //        _output.WriteJson(metadataPath, metadata);
+            //    }
+            //}
+
+            //_publishModelBuilder.AddOrUpdate(file, metadata, outputPath);
         }
 
-        private (object output, JObject metadata) CreatePageOutput(ErrorBuilder errors, FilePath file, JObject sourceModel)
+        private (object output, JObject metadata) CreatePageOutput(ErrorBuilder errors, FilePath file, JObject sourceModel, bool needOutput = false)
         {
             var outputMetadata = new JObject();
             var outputModel = new JObject();
@@ -127,10 +132,10 @@ namespace Microsoft.Docs.Build
 
             // Mandatory metadata are metadata that are required by template to successfully ran to completion.
             // The bookmark validation for SDP can be skipped when the public template is used since the mustache is not accessable for public template
-            if (_config.DryRun && (JsonSchemaProvider.IsConceptual(mime) || _config.Template.Type == PackageType.PublicTemplate))
-            {
-                return (new JObject(), new JObject());
-            }
+            //if (_config.DryRun && !needOutput && (JsonSchemaProvider.IsConceptual(mime) || _config.Template.Type == PackageType.PublicTemplate))
+            //{
+            //    return (new JObject(), new JObject());
+            //}
 
             var systemMetadataJObject = JsonUtility.ToJObject(systemMetadata);
 
@@ -177,10 +182,10 @@ namespace Microsoft.Docs.Build
 
         private (object output, JObject metadata) CreateDataOutput(FilePath file, JObject sourceModel)
         {
-            if (_config.DryRun)
-            {
-                return (new JObject(), new JObject());
-            }
+            //if (_config.DryRun)
+            //{
+            //    return (new JObject(), new JObject());
+            //}
 
             var mime = _documentProvider.GetMime(file);
             var metadata = new JObject();
@@ -223,10 +228,10 @@ namespace Microsoft.Docs.Build
                 errors.Add(Errors.Content.Custom404Page(file));
             }
 
-            if (_config.DryRun)
-            {
-                return systemMetadata;
-            }
+            //if (_config.DryRun)
+            //{
+            //    return systemMetadata;
+            //}
 
             systemMetadata.TocRel = !string.IsNullOrEmpty(userMetadata.TocRel) ? userMetadata.TocRel : _tocMap.FindTocRelativePath(file);
 
@@ -287,7 +292,7 @@ namespace Microsoft.Docs.Build
 
             ProcessConceptualHtml(errors, file, html, conceptual);
 
-            return _config.DryRun ? new JObject() : JsonUtility.ToJObject(conceptual);
+            return JsonUtility.ToJObject(conceptual);
         }
 
         private JObject LoadSchemaDocument(ErrorBuilder errors, FilePath file)
@@ -361,10 +366,10 @@ namespace Microsoft.Docs.Build
                 HtmlUtility.GetBookmarks(ref token, bookmarks);
                 HtmlUtility.AddLinkType(errors, file, ref token, _buildOptions.Locale, _config.TrustedDomains);
 
-                if (!_config.DryRun)
-                {
+                //if (!_config.DryRun)
+                //{
                     HtmlUtility.CountWord(ref token, ref wordCount);
-                }
+                //}
 
                 if (token.Type == HtmlTokenType.Text)
                 {
